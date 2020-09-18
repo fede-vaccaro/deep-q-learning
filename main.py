@@ -1,3 +1,5 @@
+from PIL import Image
+
 from game import GridGame
 from model import DQN
 import torch
@@ -15,7 +17,7 @@ def main():
     n_episodes = 500
     max_steps_per_episode = game.max_steps ** 2
     gamma = 0.90
-    e_rate_start = 0.9
+    e_rate_start = 0.90
     e_rate_end = 0.1
 
     preprocess = torchvision.transforms.Compose([
@@ -30,16 +32,17 @@ def main():
 
     for e in range(n_episodes):
         # reset game!
-        # game = GridGame(dim=16)
+        game = GridGame(dim=8)
 
-        for s in range(max_steps_per_episode):
+        #for s in range(max_steps_per_episode):
+        s = 0
+        while not game.is_terminal:
             opt.zero_grad()
             state = torch.tensor(game.state).permute((2, 0, 1)).contiguous()
             x = preprocess(state).to(device).unsqueeze(0)
 
-            state_before = x
-
-            action_net = dqn(x)
+            with torch.no_grad():
+                action_net = dqn(x)
 
             # random action
             act_index = random.randint(0, 3)
@@ -49,27 +52,33 @@ def main():
             current_e_rate = e_rate_start * (1 - e / n_episodes) + e_rate_end * e / n_episodes
             if random.uniform(0.0, 1.0) > current_e_rate:
                 action = action_net
-                argmax_q = torch.argmax(action_net)
             else:
                 action = action_rand
-                argmax_q = act_index
 
             reward = game.action(action.detach().cpu().argmax())
 
             state = torch.tensor(game.state).permute((2, 0, 1)).contiguous()
             x_after = preprocess(state).to(device).unsqueeze(0)
-
             with torch.no_grad():
                 action_after = dqn(x_after)
 
-            replay_memory += [x, action, x_after]
+            replay_memory += [(x, action, x_after, reward)]
 
-            if reward != 1:
-                y = reward + gamma * action_after.max()
-            else:
-                y = reward
+            # sample from replay memory
 
-            loss = (y - action_net.squeeze(0)[argmax_q]) ** 2
+            mini_batch = random.sample(replay_memory, min(len(replay_memory), 32))
+            x_batch = torch.cat([x[0] for x in mini_batch], dim=0)
+            x_then_batch = torch.cat([x[2] for x in mini_batch], dim=0)
+            reward_batch = torch.stack([torch.tensor([x[3]], dtype=torch.float32) for x in mini_batch], dim=0).to(device)
+
+            Q_predicted = dqn(x_batch)
+            Q_then_predicted = dqn(x_then_batch)
+            gt_non_terminal = reward_batch + gamma * Q_then_predicted.max(dim=1)[0]
+            gt_terminal = reward_batch
+            gt = torch.where(reward_batch < 0, gt_non_terminal, gt_terminal)
+
+            loss = (gt - Q_predicted.max(dim=1)[0]) ** 2
+            loss = loss.mean()
             loss.backward()
 
             opt.step()
@@ -77,19 +86,26 @@ def main():
             if s % 25 == 0:
                 print("Loss at s{}/e{}: {}; current e_rate: {}".format(s + 1, e + 1, loss, current_e_rate))
 
-            if game.is_terminal:
-                print("Terminal game!")
-                game = GridGame(dim=8)
+            s += 1
+        print("Terminal game!")
 
     # play a game and show how the agent acts!
     game = GridGame(dim=8)
+    states = []
+    max_steps = 1000
     with torch.no_grad():
-        while not game.is_terminal:
+        for i in range(max_steps):
             state = torch.tensor(game.state).permute((2, 0, 1)).contiguous()
             x = preprocess(state).to(device).unsqueeze(0)
             action = dqn(x)
             game.action(action.argmax())
-            game.visualize_state()
+            state = Image.fromarray((game.state * 255.0).astype('uint8'), 'RGB').resize((400, 400))
+            states.append(state)
+            if game.is_terminal:
+                break
+
+    states[0].save('match.gif',
+                   save_all=True, append_images=states[1:], optimize=False, duration=40, loop=0)
 
 
 if __name__ == '__main__':
