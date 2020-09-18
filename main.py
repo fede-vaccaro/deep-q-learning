@@ -16,7 +16,7 @@ def main():
 
     n_episodes = 500
     max_steps_per_episode = game.max_steps ** 2
-    gamma = 0.90
+    gamma = 0.95
     e_rate_start = 0.90
     e_rate_end = 0.1
 
@@ -29,12 +29,13 @@ def main():
     dqn.to(device)
 
     replay_memory = []
+    replay_memory_terminal = []
 
     for e in range(n_episodes):
         # reset game!
         game = GridGame(dim=8)
 
-        #for s in range(max_steps_per_episode):
+        # for s in range(max_steps_per_episode):
         s = 0
         while not game.is_terminal:
             opt.zero_grad()
@@ -66,10 +67,11 @@ def main():
 
             # sample from replay memory
 
-            mini_batch = random.sample(replay_memory, min(len(replay_memory), 32))
-            x_batch = torch.cat([x[0] for x in mini_batch], dim=0)
-            x_then_batch = torch.cat([x[2] for x in mini_batch], dim=0)
-            reward_batch = torch.stack([torch.tensor([x[3]], dtype=torch.float32) for x in mini_batch], dim=0).to(device)
+            mini_batch = random.sample(replay_memory, min(len(replay_memory), 31))
+            x_batch = torch.cat([x[0] for x in mini_batch] + [x], dim=0)
+            x_then_batch = torch.cat([x[2] for x in mini_batch] + [x_after], dim=0)
+            reward_batch = torch.stack([torch.tensor([x[3]], dtype=torch.float32) for x in mini_batch] + [
+                torch.tensor([reward], dtype=torch.float32)], dim=0).to(device)
 
             Q_predicted = dqn(x_batch)
             Q_then_predicted = dqn(x_then_batch)
@@ -87,7 +89,8 @@ def main():
                 print("Loss at s{}/e{}: {}; current e_rate: {}".format(s + 1, e + 1, loss, current_e_rate))
 
             s += 1
-        print("Terminal game!")
+            if game.is_terminal:
+                print("Terminal game!")
 
     # play a game and show how the agent acts!
     game = GridGame(dim=8)
@@ -97,8 +100,12 @@ def main():
         for i in range(max_steps):
             state = torch.tensor(game.state).permute((2, 0, 1)).contiguous()
             x = preprocess(state).to(device).unsqueeze(0)
-            action = dqn(x)
-            game.action(action.argmax())
+            if random.uniform(0.0, 1.0) < 0.1:
+                action = random.randint(0, 3)
+            else:
+                action = dqn(x).argmax()
+
+            game.action(action)
             state = Image.fromarray((game.state * 255.0).astype('uint8'), 'RGB').resize((400, 400))
             states.append(state)
             if game.is_terminal:

@@ -45,7 +45,7 @@ class GridGame:
             self.current = self.current[0], max(self.current[1] - 1, 0)
 
         if self.current == self.finish:
-            reward = 1
+            reward = 10
             self.state[self.current] = (0.0, 0.0, 1.0)
             self.is_terminal = True
         else:
