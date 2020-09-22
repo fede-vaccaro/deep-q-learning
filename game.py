@@ -44,8 +44,8 @@ class GridGame:
         holes_set = set()
         unavailable = set()
         for i in range(n_holes):
-            row = random.randint(0, self.side_dim-1)
-            col = random.randint(0, self.side_dim-1)
+            row = random.randint(0, self.side_dim - 1)
+            col = random.randint(0, self.side_dim - 1)
             holes_set.add((row, col))
 
         for hole in holes_set:
@@ -130,7 +130,7 @@ class GridGame:
             reward = manhattan(self.start, self.finish)
             self.state[self.current] = (0.0, 0.0, 1.0)
             self.is_terminal = True
-        elif self.current == old_state:  # or self.current in self.visited_cells:
+        elif self.current == old_state or self.current in self.visited_cells:
             self.state[self.current] = (1.0, 0.0, 0.0)
             # reward = -manhattan(self.current, self.finish)/self.dim*2.0
             reward = -2
@@ -139,8 +139,8 @@ class GridGame:
             reward = -3
         else:
             self.state[self.current] = (1.0, 0.0, 0.0)
-            reward = manhattan(old_state, self.finish) - manhattan(self.current, self.finish)
-            # reward = -1
+            reward = manhattan(old_state, self.finish) - manhattan(self.current, self.finish)  # the reward is 1 if \
+            # the agent get nearer, -1 otherwise
 
         if old_state in self.holes and (old_state != self.current):
             self.state[old_state] = (0.0, 0.0, 0.0)

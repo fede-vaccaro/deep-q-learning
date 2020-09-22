@@ -4,23 +4,39 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class DQN(nn.Module):
-    def __init__(self, input_dim):
+    def __init__(self, input_dim, use_batch_norm):
         super(DQN, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=4, out_channels=32, kernel_size=(3, 3))
+        if use_batch_norm:
+            self.bn1 = nn.BatchNorm2d(32)
         conv_1_out = input_dim - 3 + 1
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(6, 6))
-        conv_2_out = conv_1_out - 6 + 1
+
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(5, 5))
+        if use_batch_norm:
+            self.bn2 = nn.BatchNorm2d(64)
+        conv_2_out = conv_1_out - 5 + 1
+        conv_2_out //= 2  # max pool
+
         self.dense = nn.Linear(in_features=(conv_2_out ** 2) * 64, out_features=256)
         self.dense2 = nn.Linear(in_features=256, out_features=256)
         self.dense3 = nn.Linear(in_features=256, out_features=4)
 
+        self.use_batch_norm = use_batch_norm
+
     def forward(self, x):
         y = self.conv1(x)
+        if self.use_batch_norm:
+            y = self.bn1(y)
         y = F.relu(y)
 
         y = self.conv2(y)
+        if self.use_batch_norm:
+            y = self.bn2(y)
         y = F.relu(y)
+
+        y = F.max_pool2d(y, 2)
 
         # flatten
         batch_size = y.size()[0]

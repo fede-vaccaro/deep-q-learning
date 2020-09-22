@@ -19,18 +19,18 @@ def cat(*args):
         return t_list[0]
 
 
-game_dim = 16
+game_dim = 32
 
 
 def main():
-    dqn = DQN(input_dim=game_dim)
+    dqn = DQN(input_dim=game_dim, use_batch_norm=True)
     game = GridGame(dim=game_dim)
 
     device = 'cuda'
     frame_buffer = FrameBuffer(device=device, frame_dim=game_dim)
     frame_buffer_target = FrameBuffer(device=device, frame_dim=game_dim)
 
-    n_episodes = 300
+    n_episodes = 600
     gamma = 0.90
     e_rate_start = 0.90
     e_rate_end = 0.1
@@ -66,6 +66,7 @@ def main():
             frame_buffer.add_frame(x)
             frame_buffer_target.add_frame(x)
 
+            dqn.train(False)
             action_net = dqn(frame_buffer.get_buffer())
 
             # random action
@@ -94,8 +95,10 @@ def main():
             # sample from replay memory
             x_batch, actions_batch, x_then_batch, reward_batch = replay_memory.get_sample(32)
 
+            dqn.train(True)
             Q_predicted = dqn(x_batch)
             with torch.no_grad():
+                dqn.train(False)
                 Q_then_predicted = dqn(x_then_batch)
 
             gt_non_terminal = reward_batch + gamma * Q_then_predicted.max(dim=1)[0]
@@ -139,6 +142,8 @@ def main():
 
     states = []
     max_steps = 1000
+
+    dqn.train(False)
     with torch.no_grad():
         for i in range(max_steps):
             state_rgb = Image.fromarray((game.get_state(rgb=True) * 255.0).astype('uint8'), 'RGB').resize((400, 400))
@@ -159,7 +164,7 @@ def main():
 
             game.action(action)
 
-    states[0].save('match_{}.gif'.format(n_episodes),
+    states[0].save('match_{}_dim{}.gif'.format(n_episodes, game_dim),
                    save_all=True, append_images=states[1:], optimize=False, duration=150, loop=0)
 
 
