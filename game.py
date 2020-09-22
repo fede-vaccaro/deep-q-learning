@@ -57,7 +57,7 @@ class GridGame:
         start = self.get_init_position(start_pos_on_side, start_side)
 
         finish_perimeter_pos = (start_perimeter_pos + random.randint(self.side_dim, self.side_dim * 2) - 1) % (
-                    self.side_dim * 4 - 1)
+                self.side_dim * 4 - 1)
         finish_side = finish_perimeter_pos // self.side_dim
         finish_pos_on_side = finish_perimeter_pos % self.side_dim
 
@@ -113,10 +113,10 @@ class GridGame:
             reward = manhattan(self.start, self.finish)
             self.state[self.current] = (0.0, 0.0, 1.0)
             self.is_terminal = True
-        # elif self.current == old_state or self.current in self.visited_cells:
-        #    self.state[self.current] = (1.0, 0.0, 0.0)
-        #    #reward = -manhattan(self.current, self.finish)/self.dim*2.0
-        #    reward = -2
+        elif self.current == old_state:  # or self.current in self.visited_cells:
+            self.state[self.current] = (1.0, 0.0, 0.0)
+            # reward = -manhattan(self.current, self.finish)/self.dim*2.0
+            reward = -2
         else:
             self.state[self.current] = (1.0, 0.0, 0.0)
             reward = manhattan(old_state, self.finish) - manhattan(self.current, self.finish)
@@ -126,12 +126,19 @@ class GridGame:
         self.total_reward += reward
         return reward
 
-    def get_state(self):
+    def get_stats(self):
+        state_grey = self.get_state()
+        return state_grey.flatten().mean(), state_grey.flatten().std()
+
+    def get_state(self, rgb=False):
+        if rgb:
+            return self.state
         r, g, b = self.state[:, :, 0], self.state[:, :, 1], self.state[:, :, 2]
         gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
 
-        #return gray
-        return self.state
+        return gray[np.newaxis, :]
+
+
 if __name__ == '__main__':
     game = GridGame()
 

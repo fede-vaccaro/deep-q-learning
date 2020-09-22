@@ -24,6 +24,7 @@ game_dim = 16
 
 def main():
     dqn = DQN(input_dim=game_dim)
+    game = GridGame(dim=game_dim)
 
     device = 'cuda'
 
@@ -32,8 +33,10 @@ def main():
     e_rate_start = 0.90
     e_rate_end = 0.1
 
+    mean, std = game.get_stats()
+
     preprocess = torchvision.transforms.Compose([
-        torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        torchvision.transforms.Normalize(mean=[mean], std=[std]),
     ])
 
     opt = torch.optim.Adam(lr=1e-4, params=dqn.parameters())
@@ -47,7 +50,6 @@ def main():
     scheduler = LambdaLR(opt, lr_lambda=[lambda1])
     losses = []
 
-    game = GridGame(dim=game_dim)
     for e in range(n_episodes):
         # reset game!
 
@@ -56,7 +58,7 @@ def main():
         for s in range(1000):
             # while not game.is_terminal:
             opt.zero_grad()
-            state = torch.tensor(game.get_state()).permute((2, 0, 1)).contiguous()
+            state = torch.tensor(game.get_state()).contiguous()  # .permute((2, 0, 1))
             x = preprocess(state).to(device).unsqueeze(0)
 
             action_net = dqn(x)
@@ -76,7 +78,7 @@ def main():
 
             reward = game.action(action.detach().cpu().argmax())
 
-            state = torch.tensor(game.get_state()).permute((2, 0, 1)).contiguous()
+            state = torch.tensor(game.get_state()).contiguous()
             x_after = preprocess(state).to(device).unsqueeze(0)
 
             replay_memory.add_sample(x, action.argmax(dim=1), x_after, reward)
@@ -128,7 +130,7 @@ def main():
     max_steps = 1000
     with torch.no_grad():
         for i in range(max_steps):
-            state = torch.tensor(game.get_state()).permute((2, 0, 1)).contiguous()
+            state = torch.tensor(game.get_state()).contiguous()
             x = preprocess(state).to(device).unsqueeze(0)
             if random.uniform(0.0, 1.0) < e_rate_end / 2.0:
                 action = random.randint(0, 3)
@@ -136,7 +138,7 @@ def main():
                 action = dqn(x).argmax()
 
             game.action(action)
-            state = Image.fromarray((game.get_state() * 255.0).astype('uint8'), 'RGB').resize((400, 400))
+            state = Image.fromarray((game.get_state(rgb=True) * 255.0).astype('uint8'), 'RGB').resize((400, 400))
             states.append(state)
             if game.is_terminal:
                 print("Agent won in {} steps!".format(i))

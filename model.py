@@ -8,7 +8,7 @@ import torch.nn.functional as F
 class DQN(nn.Module):
     def __init__(self, input_dim):
         super(DQN, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=(3, 3))
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=(3, 3))
         conv_1_out = input_dim - 3 + 1
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(6, 6))
         conv_2_out = conv_1_out - 6 + 1
@@ -67,3 +67,20 @@ class ReplayMemory:
             return x_batch, actions_batch, x_then_batch, reward_batch
         else:
             return None, None, None, None
+
+
+class FrameBuffer:
+    def __init__(self, frame_dim, device, mem_length=4):
+        self.mem_length = mem_length
+        self.device = device
+        self.mem = []
+
+        for i in range(mem_length):
+            self.mem.append(torch.zeros(1, frame_dim, frame_dim).to(self.device))
+
+    def get_mem(self):
+        return torch.cat(self.mem, dim=0)
+
+    def add_frame(self, frame):
+        self.mem = self.mem[1:]
+        self.mem += [frame]
