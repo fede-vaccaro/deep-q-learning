@@ -3,7 +3,7 @@ from PIL import Image
 from torch.optim.lr_scheduler import LambdaLR
 
 from game import GridGame
-from model import DQN, ReplayMemory
+from model import *
 import torch
 import torchvision
 import random
@@ -27,6 +27,8 @@ def main():
     game = GridGame(dim=game_dim)
 
     device = 'cuda'
+    frame_buffer = FrameBuffer(device=device, frame_dim=game_dim)
+    frame_buffer_target = FrameBuffer(device=device, frame_dim=game_dim)
 
     n_episodes = 300
     gamma = 0.90
@@ -59,9 +61,12 @@ def main():
             # while not game.is_terminal:
             opt.zero_grad()
             state = torch.tensor(game.get_state()).contiguous()  # .permute((2, 0, 1))
-            x = preprocess(state).to(device).unsqueeze(0)
+            x = preprocess(state).to(device)
 
-            action_net = dqn(x)
+            frame_buffer.add_frame(x)
+            frame_buffer_target.add_frame(x)
+
+            action_net = dqn(frame_buffer.get_buffer())
 
             # random action
             act_index = random.randint(0, 3)
@@ -79,9 +84,12 @@ def main():
             reward = game.action(action.detach().cpu().argmax())
 
             state = torch.tensor(game.get_state()).contiguous()
-            x_after = preprocess(state).to(device).unsqueeze(0)
 
-            replay_memory.add_sample(x, action.argmax(dim=1), x_after, reward)
+            x_after = preprocess(state).to(device)
+            frame_buffer_target.add_frame(x_after)
+
+            replay_memory.add_sample(frame_buffer.get_buffer(), action.argmax(dim=1), frame_buffer_target.get_buffer(),
+                                     reward)
 
             # sample from replay memory
             x_batch, actions_batch, x_then_batch, reward_batch = replay_memory.get_sample(32)
@@ -111,6 +119,8 @@ def main():
                 print("Terminal game!")
                 print("Step per epoch:", s)
                 game = GridGame(dim=game_dim)
+                frame_buffer = FrameBuffer(frame_dim=game_dim, device=device)
+                frame_buffer_target = FrameBuffer(frame_dim=game_dim, device=device)
                 break
 
         epoch_loss = np.array(epoch_loss).mean()
@@ -125,24 +135,29 @@ def main():
 
     # play a game and show how the agent acts!
     game = GridGame(dim=game_dim)
+    frame_buffer = FrameBuffer(device=device, frame_dim=game_dim)
 
     states = []
     max_steps = 1000
     with torch.no_grad():
         for i in range(max_steps):
-            state = torch.tensor(game.get_state()).contiguous()
-            x = preprocess(state).to(device).unsqueeze(0)
-            if random.uniform(0.0, 1.0) < e_rate_end / 2.0:
-                action = random.randint(0, 3)
-            else:
-                action = dqn(x).argmax()
+            state_rgb = Image.fromarray((game.get_state(rgb=True) * 255.0).astype('uint8'), 'RGB').resize((400, 400))
+            states.append(state_rgb)
 
-            game.action(action)
-            state = Image.fromarray((game.get_state(rgb=True) * 255.0).astype('uint8'), 'RGB').resize((400, 400))
-            states.append(state)
             if game.is_terminal:
                 print("Agent won in {} steps!".format(i))
                 break
+
+            state = torch.tensor(game.get_state()).contiguous()
+
+            x = preprocess(state).to(device)
+            frame_buffer.add_frame(x)
+            if random.uniform(0.0, 1.0) < e_rate_end / 2.0:
+                action = random.randint(0, 3)
+            else:
+                action = dqn(frame_buffer.get_buffer()).argmax()
+
+            game.action(action)
 
     states[0].save('match_{}.gif'.format(n_episodes),
                    save_all=True, append_images=states[1:], optimize=False, duration=150, loop=0)

@@ -4,11 +4,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 class DQN(nn.Module):
     def __init__(self, input_dim):
         super(DQN, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=(3, 3))
+        self.conv1 = nn.Conv2d(in_channels=4, out_channels=32, kernel_size=(3, 3))
         conv_1_out = input_dim - 3 + 1
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(6, 6))
         conv_2_out = conv_1_out - 6 + 1
@@ -78,9 +77,10 @@ class FrameBuffer:
         for i in range(mem_length):
             self.mem.append(torch.zeros(1, frame_dim, frame_dim).to(self.device))
 
-    def get_mem(self):
-        return torch.cat(self.mem, dim=0)
+    def get_buffer(self):
+        fb = torch.cat(self.mem, dim=0).unsqueeze(0)
+        return fb.clone()
 
     def add_frame(self, frame):
         self.mem = self.mem[1:]
-        self.mem += [frame]
+        self.mem += [frame.clone()]

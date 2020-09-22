@@ -13,7 +13,7 @@ def manhattan(a, b):
 
 
 class GridGame:
-    def __init__(self, dim=16, start=None, finish=None):
+    def __init__(self, dim=16, start=None, finish=None, n_holes=16):
         state = np.ones((dim, dim, 3), dtype='float32')
 
         self.side_dim = dim
@@ -38,6 +38,22 @@ class GridGame:
         self.step_count = 0
         self.is_terminal = False
         self.visited_cells = set()
+        self.holes = self.add_holes(n_holes)
+
+    def add_holes(self, n_holes):
+        holes_set = set()
+        for i in range(n_holes):
+            row = random.randint(0, self.side_dim-1)
+            col = random.randint(0, self.side_dim-1)
+            holes_set.add((row, col))
+
+        for hole in holes_set:
+            if hole != self.start and hole != self.finish:
+                self.state[hole] = [0.0, 0.0, 0.0]
+            else:
+                holes_set.remove(hole)
+
+        return holes_set
 
     def init_randomized_start(self):
         '''
@@ -56,7 +72,7 @@ class GridGame:
 
         start = self.get_init_position(start_pos_on_side, start_side)
 
-        finish_perimeter_pos = (start_perimeter_pos + random.randint(self.side_dim, self.side_dim * 2) - 1) % (
+        finish_perimeter_pos = (start_perimeter_pos + random.randint(self.side_dim * 2, self.side_dim * 3) - 1) % (
                 self.side_dim * 4 - 1)
         finish_side = finish_perimeter_pos // self.side_dim
         finish_pos_on_side = finish_perimeter_pos % self.side_dim
@@ -117,10 +133,16 @@ class GridGame:
             self.state[self.current] = (1.0, 0.0, 0.0)
             # reward = -manhattan(self.current, self.finish)/self.dim*2.0
             reward = -2
+        elif self.current in self.holes:
+            self.state[self.current] = (1.0, 0.0, 1.0)
+            reward = -3
         else:
             self.state[self.current] = (1.0, 0.0, 0.0)
             reward = manhattan(old_state, self.finish) - manhattan(self.current, self.finish)
             # reward = -1
+
+        if old_state in self.holes and (old_state != self.current):
+            self.state[old_state] = (0.0, 0.0, 0.0)
 
         self.step_count += 1
         self.total_reward += reward
