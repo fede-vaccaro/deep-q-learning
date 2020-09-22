@@ -20,20 +20,19 @@ def cat(*args):
 
 
 game_dim = 32
+n_episodes = 1200
+gamma = 0.95
+e_rate_start = 0.90
+e_rate_end = 0.1
 
 
 def main():
-    dqn = DQN(input_dim=game_dim, use_batch_norm=True)
+    dqn = DQN(input_dim=game_dim, use_batch_norm=False)
     game = GridGame(dim=game_dim)
 
     device = 'cuda'
     frame_buffer = FrameBuffer(device=device, frame_dim=game_dim)
     frame_buffer_target = FrameBuffer(device=device, frame_dim=game_dim)
-
-    n_episodes = 600
-    gamma = 0.90
-    e_rate_start = 0.90
-    e_rate_end = 0.1
 
     mean, std = game.get_stats()
 
@@ -129,12 +128,22 @@ def main():
         epoch_loss = np.array(epoch_loss).mean()
         losses += [epoch_loss]
 
-        # scheduler.step()
+        if (e + 1) % 100 == 0:
+            torch.save({
+                'model': dqn.state_dict(),
+                'opt': opt.state_dict(),
+                'epoch': e,
+            }, 'dqn_training_e{}_game_dim{}.ptd'.format(n_episodes, game_dim))
+
+            # scheduler.step()
 
     plt.plot(losses)
     plt.ylabel('loss')
     plt.savefig('training_{}.pdf'.format(n_episodes))
     plt.show()
+
+    # save model for testing
+    torch.save(dqn.state_dict(), 'dqn_e{}_game_dim{}.ptd'.format(n_episodes, game_dim))
 
     # play a game and show how the agent acts!
     game = GridGame(dim=game_dim)

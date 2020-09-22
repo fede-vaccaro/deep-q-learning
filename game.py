@@ -13,7 +13,7 @@ def manhattan(a, b):
 
 
 class GridGame:
-    def __init__(self, dim=16, start=None, finish=None, n_holes=16):
+    def __init__(self, dim=32, start=None, finish=None, n_holes=32):
         state = np.ones((dim, dim, 3), dtype='float32')
 
         self.side_dim = dim
