@@ -41,7 +41,7 @@ class DQN(nn.Module):
 
 class ReplayMemory:
 
-    def __init__(self, device, max_dim=10000):
+    def __init__(self, device, max_dim=50000):
         self.device = device
         self.replay_memory = []
         self.max_dim = max_dim
@@ -66,4 +66,4 @@ class ReplayMemory:
 
             return x_batch, actions_batch, x_then_batch, reward_batch
         else:
-            return None, None, None
+            return None, None, None, None

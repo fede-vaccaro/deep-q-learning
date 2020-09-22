@@ -47,16 +47,16 @@ def main():
     scheduler = LambdaLR(opt, lr_lambda=[lambda1])
     losses = []
 
+    game = GridGame(dim=game_dim)
     for e in range(n_episodes):
         # reset game!
-        game = GridGame(dim=game_dim)
 
         # for s in range(max_steps_per_episode):
         epoch_loss = []
         for s in range(1000):
             # while not game.is_terminal:
             opt.zero_grad()
-            state = torch.tensor(game.state).permute((2, 0, 1)).contiguous()
+            state = torch.tensor(game.get_state()).permute((2, 0, 1)).contiguous()
             x = preprocess(state).to(device).unsqueeze(0)
 
             action_net = dqn(x)
@@ -76,15 +76,13 @@ def main():
 
             reward = game.action(action.detach().cpu().argmax())
 
-            state = torch.tensor(game.state).permute((2, 0, 1)).contiguous()
+            state = torch.tensor(game.get_state()).permute((2, 0, 1)).contiguous()
             x_after = preprocess(state).to(device).unsqueeze(0)
 
             replay_memory.add_sample(x, action.argmax(dim=1), x_after, reward)
 
             # sample from replay memory
             x_batch, actions_batch, x_then_batch, reward_batch = replay_memory.get_sample(32)
-
-            # x_batch_t, x_then_batch_t, reward_batch_t = replay_memory.get_sample(8)
 
             Q_predicted = dqn(x_batch)
             with torch.no_grad():
@@ -110,6 +108,7 @@ def main():
             if game.is_terminal:
                 print("Terminal game!")
                 print("Step per epoch:", s)
+                game = GridGame(dim=game_dim)
                 break
 
         epoch_loss = np.array(epoch_loss).mean()
@@ -124,11 +123,12 @@ def main():
 
     # play a game and show how the agent acts!
     game = GridGame(dim=game_dim)
+
     states = []
     max_steps = 1000
     with torch.no_grad():
         for i in range(max_steps):
-            state = torch.tensor(game.state).permute((2, 0, 1)).contiguous()
+            state = torch.tensor(game.get_state()).permute((2, 0, 1)).contiguous()
             x = preprocess(state).to(device).unsqueeze(0)
             if random.uniform(0.0, 1.0) < e_rate_end / 2.0:
                 action = random.randint(0, 3)
@@ -136,7 +136,7 @@ def main():
                 action = dqn(x).argmax()
 
             game.action(action)
-            state = Image.fromarray((game.state * 255.0).astype('uint8'), 'RGB').resize((400, 400))
+            state = Image.fromarray((game.get_state() * 255.0).astype('uint8'), 'RGB').resize((400, 400))
             states.append(state)
             if game.is_terminal:
                 print("Agent won in {} steps!".format(i))
