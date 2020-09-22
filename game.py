@@ -42,6 +42,7 @@ class GridGame:
 
     def add_holes(self, n_holes):
         holes_set = set()
+        unavailable = set()
         for i in range(n_holes):
             row = random.randint(0, self.side_dim-1)
             col = random.randint(0, self.side_dim-1)
@@ -51,9 +52,9 @@ class GridGame:
             if hole != self.start and hole != self.finish:
                 self.state[hole] = [0.0, 0.0, 0.0]
             else:
-                holes_set.remove(hole)
+                unavailable.add(hole)
 
-        return holes_set
+        return holes_set - unavailable
 
     def init_randomized_start(self):
         '''
