@@ -1,7 +1,10 @@
+import time
+
 import numpy as np
 from PIL import Image
 from pip._vendor.distlib.compat import raw_input
 from torch.optim.lr_scheduler import LambdaLR
+from tqdm import tqdm
 
 from game import GridGame
 from model import *
@@ -21,10 +24,11 @@ def cat(*args):
 
 
 game_dim = 8
-n_episodes = 1000
+n_episodes = 300
 gamma = 0.99
 e_rate_start = 0.90
 e_rate_end = 0.1
+swap_freq = 10
 
 obs_dim = 84  # x 84
 
@@ -37,7 +41,11 @@ game_params = {
 
 def main():
     dqn = DQN(input_dim=obs_dim, use_batch_norm=False)
+    dqn_target = DQN(input_dim=obs_dim, use_batch_norm=False)
     game = GridGame(**game_params)
+
+    dqn.__setattr__('name', 'net')
+    dqn_target.__setattr__('name', 'target')
 
     device = 'cuda'
     frame_buffer = FrameBuffer(device=device, frame_dim=obs_dim)
@@ -50,12 +58,15 @@ def main():
     ])
 
     opt = torch.optim.Adam(lr=1e-4, params=dqn.parameters())
+    target_opt = torch.optim.Adam(lr=1e-4, params=dqn_target.parameters())
 
     dqn.to(device)
+    dqn_target.to(device)
 
     replay_memory = ReplayMemory(device)
 
     exploration_stop = 0.5
+
     lambda1 = lambda e: max(
         e_rate_start * (1 - e / n_episodes * 1 / exploration_stop) + e_rate_end * e / n_episodes * 1 / exploration_stop,
         e_rate_end)
@@ -67,7 +78,9 @@ def main():
 
         # for s in range(max_steps_per_episode):
         epoch_loss = []
-        for s in range(1000):
+        tqdm_ = tqdm(range(1000))
+        t = time.time()
+        for s in tqdm_:
             # while not game.is_terminal:
             opt.zero_grad()
             state = torch.tensor(game.get_state()).contiguous()  # .permute((2, 0, 1))
@@ -107,8 +120,8 @@ def main():
             dqn.train(True)
             Q_predicted = dqn(x_batch)
             with torch.no_grad():
-                dqn.train(False)
-                Q_then_predicted = dqn(x_then_batch)
+                dqn_target.train(False)
+                Q_then_predicted = dqn_target(x_then_batch)
 
             gt_non_terminal = reward_batch + gamma * Q_then_predicted.max(dim=1)[0]
             gt_terminal = reward_batch
@@ -122,21 +135,27 @@ def main():
 
             opt.step()
 
-            if (s + 1) % 200 == 0:
-                print(
-                    "Loss at s{}-e{}/{}: {}; current e_rate: {}".format(s + 1, e + 1, n_episodes, loss, current_e_rate))
-                # frame_buffer.view_buffer()
-                # frame_buffer_target.view_buffer()
-                # programPause = raw_input("Press the <ENTER> key to continue...")
+            # if (s + 1) % 200 == 0:
+            #     print(
+            #         "Loss at s{}-e{}/{}: {}; current e_rate: {}".format(s + 1, e + 1, n_episodes, loss, current_e_rate))
+            #     # frame_buffer.view_buffer()
+            #     # frame_buffer_target.view_buffer()
+            #     # programPause = raw_input("Press the <ENTER> key to continue...")
+
+            tqdm_.set_description(
+                "Loss at s{}-e{}/{}: {}; current e_rate: {}".format(s + 1, e + 1, n_episodes, float(loss),
+                                                                    current_e_rate))
 
             s += 1
             if game.is_terminal:
                 print("Terminal game!")
-                print("Step per epoch:", s)
+                print("Step before ending:", game.step_count)
                 game = GridGame(**game_params)
                 frame_buffer = FrameBuffer(frame_dim=obs_dim, device=device)
                 frame_buffer_target = FrameBuffer(frame_dim=obs_dim, device=device)
                 break
+
+        print("Time for epoch {}:{}s".format(e + 1, int(time.time() - t)))
 
         epoch_loss = np.array(epoch_loss).mean()
         losses += [epoch_loss]
@@ -150,10 +169,18 @@ def main():
 
             # scheduler.step()
 
+        if (e + 1) % swap_freq == 0:
+            print("SWAPPING NETWORKS & OPTIMIZERS!")
+            dqn, dqn_target = dqn_target, dqn
+            opt, target_opt = target_opt, opt
+
     plt.plot(losses)
     plt.ylabel('loss')
     plt.savefig('training_{}.pdf'.format(n_episodes))
     plt.show()
+
+    if dqn.name == 'target':
+        dqn = dqn_target
 
     # save model for testing
     torch.save(dqn.state_dict(), 'dqn_e{}_game_dim{}.ptd'.format(n_episodes, game_dim))
