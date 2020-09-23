@@ -3,6 +3,7 @@ import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
 
 
 class DQN(nn.Module):
@@ -109,6 +110,13 @@ class FrameBuffer:
     def get_buffer(self):
         fb = torch.cat(self.mem, dim=0).unsqueeze(0)
         return fb.clone()
+
+    def view_buffer(self):
+        for state in self.mem:
+            s_np = state.cpu().numpy()[0]
+            plt.imshow(s_np)
+            plt.show()
+
 
     def add_frame(self, frame):
         self.mem = self.mem[1:]

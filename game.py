@@ -22,10 +22,11 @@ class GridGame:
 
         if (not start) and (not finish):
             start, finish = self.init_randomized_start()
-        elif not start:
-            start = (0, 0)
-        elif not finish:
-            finish = (dim - 1, dim - 1)
+        else:
+            if not start:
+                start = (0, 0)
+            if not finish:
+                finish = (dim - 1, dim - 1)
 
         state[start] = [1.0, 0.0, 0.0]
         state[finish] = [0.0, 1.0, 0.0]
@@ -168,7 +169,13 @@ class GridGame:
 
 
 if __name__ == '__main__':
-    game = GridGame()
+    game_params = {
+        'dim': 8,
+        'start': (0, 0),
+        'n_holes': 0
+    }
+
+    game = GridGame(**game_params)
 
     # action_1 = np.array(3)
     # action_2 = np.array(2)

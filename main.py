@@ -1,5 +1,6 @@
 import numpy as np
 from PIL import Image
+from pip._vendor.distlib.compat import raw_input
 from torch.optim.lr_scheduler import LambdaLR
 
 from game import GridGame
@@ -20,17 +21,23 @@ def cat(*args):
 
 
 game_dim = 8
-n_episodes = 500
-gamma = 0.95
+n_episodes = 1000
+gamma = 0.99
 e_rate_start = 0.90
 e_rate_end = 0.1
 
 obs_dim = 84  # x 84
 
+game_params = {
+    'dim': game_dim,
+    # 'start': (0, 0),
+    'n_holes': 0
+}
+
 
 def main():
     dqn = DQN(input_dim=obs_dim, use_batch_norm=False)
-    game = GridGame(dim=game_dim)
+    game = GridGame(**game_params)
 
     device = 'cuda'
     frame_buffer = FrameBuffer(device=device, frame_dim=obs_dim)
@@ -118,12 +125,15 @@ def main():
             if (s + 1) % 200 == 0:
                 print(
                     "Loss at s{}-e{}/{}: {}; current e_rate: {}".format(s + 1, e + 1, n_episodes, loss, current_e_rate))
+                # frame_buffer.view_buffer()
+                # frame_buffer_target.view_buffer()
+                # programPause = raw_input("Press the <ENTER> key to continue...")
 
             s += 1
             if game.is_terminal:
                 print("Terminal game!")
                 print("Step per epoch:", s)
-                game = GridGame(dim=game_dim)
+                game = GridGame(**game_params)
                 frame_buffer = FrameBuffer(frame_dim=obs_dim, device=device)
                 frame_buffer_target = FrameBuffer(frame_dim=obs_dim, device=device)
                 break
@@ -148,7 +158,7 @@ def main():
     # save model for testing
     torch.save(dqn.state_dict(), 'dqn_e{}_game_dim{}.ptd'.format(n_episodes, game_dim))
 
-    test(device=device, dqn=dqn, game_dim=game_dim, obs_dim=obs_dim, preprocess=preprocess, draw_gif=True)
+    test(device=device, dqn=dqn, game_params=game_params, obs_dim=obs_dim, preprocess=preprocess, draw_gif=True)
 
 
 if __name__ == '__main__':
