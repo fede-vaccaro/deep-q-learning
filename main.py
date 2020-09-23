@@ -155,7 +155,7 @@ def main():
                 frame_buffer_target = FrameBuffer(frame_dim=obs_dim, device=device)
                 #break
 
-        # print("Time for epoch {}:{}s".format(e + 1, int(time.time() - t)))
+        print("Time for epoch {}:{}s".format(e + 1, int(time.time() - t)))
 
         epoch_loss = np.array(epoch_loss).mean()
         losses += [epoch_loss]
