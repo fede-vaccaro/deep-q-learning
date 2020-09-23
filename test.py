@@ -46,7 +46,7 @@ if __name__ == '__main__':
     game_params = {
         'dim': game_dim,
         # 'start': (0, 0),
-        'n_holes': 0
+        'n_holes': 0,
     }
 
     dqn = DQN(input_dim=obs_dim, use_batch_norm=False)

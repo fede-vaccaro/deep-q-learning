@@ -31,12 +31,12 @@ obs_dim = 84  # x 84
 game_params = {
     'dim': game_dim,
     # 'start': (0, 0),
-    'n_holes': 0
+    'n_holes': 8
 }
 
 
 def main():
-    dqn = DQN(input_dim=obs_dim, use_batch_norm=False)
+    dqn = DQN(input_dim=obs_dim, use_batch_norm=True)
     game = GridGame(**game_params)
 
     device = 'cuda'
@@ -98,41 +98,51 @@ def main():
             x_after = preprocess(state).to(device)
             frame_buffer_target.add_frame(x_after)
 
-            replay_memory.add_sample(frame_buffer.get_buffer(), action.argmax(dim=1), frame_buffer_target.get_buffer(),
-                                     reward)
+            if s % 4 == 0:
+                replay_memory.add_sample(frame_buffer.get_buffer(), action.argmax(dim=1),
+                                         frame_buffer_target.get_buffer(),
+                                         reward)
 
-            # sample from replay memory
-            x_batch, actions_batch, x_then_batch, reward_batch = replay_memory.get_sample(32)
+                # sample from replay memory
+                x_batch, actions_batch, x_then_batch, reward_batch = replay_memory.get_sample(32)
 
-            dqn.train(True)
-            Q_predicted = dqn(x_batch)
-            with torch.no_grad():
-                dqn.train(False)
-                Q_then_predicted = dqn(x_then_batch)
+                dqn.train(True)
+                Q_predicted = dqn(x_batch)
+                with torch.no_grad():
+                    dqn.train(False)
+                    Q_then_predicted = dqn(x_then_batch)
 
-            gt_non_terminal = reward_batch + gamma * Q_then_predicted.max(dim=1)[0]
-            gt_terminal = reward_batch
-            gt = torch.where(reward_batch != 2, gt_non_terminal, gt_terminal)
+                gt_non_terminal = reward_batch + gamma * Q_then_predicted.max(dim=1)[0]
+                gt_terminal = reward_batch
+                gt = torch.where(reward_batch != 2, gt_non_terminal, gt_terminal)
 
-            loss = (gt - torch.gather(Q_predicted, 1, actions_batch.unsqueeze(-1))) ** 2
-            loss = loss.mean() + dqn.get_reg_loss(1e-5)
-            loss.backward()
+                loss = (gt - torch.gather(Q_predicted, 1, actions_batch.unsqueeze(-1))) ** 2
+                loss = loss.mean() + dqn.get_reg_loss(1e-5)
+                loss.backward()
 
-            epoch_loss += [float(loss)]
+                epoch_loss += [float(loss)]
 
-            opt.step()
+                opt.step()
 
-            if (s + 1) % 200 == 0:
-                print(
-                    "Loss at s{}-e{}/{}: {}; current e_rate: {}".format(s + 1, e + 1, n_episodes, loss, current_e_rate))
-                # frame_buffer.view_buffer()
-                # frame_buffer_target.view_buffer()
-                # programPause = raw_input("Press the <ENTER> key to continue...")
+                if (s + 1) % 200 == 0:
+                    print(
+                        "Loss at s{}-e{}/{}: {}; current e_rate: {}".format(s + 1, e + 1, n_episodes, loss,
+                                                                            current_e_rate))
+                    # frame_buffer.view_buffer()
+                    # frame_buffer_target.view_buffer()
+                    # programPause = raw_input("Press the <ENTER> key to continue...")
 
-            s += 1
             if game.is_terminal:
                 print("Terminal game!")
                 print("Step per epoch:", s)
+                print(
+                    "Terminal game!\n" +
+                    "Step per epoch: " + str(s) + "\n"
+                                                  "Timestamp: s{}-e{}/{}; current e_rate: {}\n".format(s + 1, e + 1,
+                                                                                                       n_episodes,
+                                                                                                       current_e_rate)
+                )
+
                 game = GridGame(**game_params)
                 frame_buffer = FrameBuffer(frame_dim=obs_dim, device=device)
                 frame_buffer_target = FrameBuffer(frame_dim=obs_dim, device=device)

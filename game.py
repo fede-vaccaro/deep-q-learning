@@ -140,7 +140,7 @@ class GridGame:
             reward = -2
         elif self.current in self.holes:
             self.state[self.current] = (1.0, 0.0, 1.0)
-            reward = -4
+            reward = -2
         else:
             self.state[self.current] = (1.0, 0.0, 0.0)
             reward = manhattan(old_state, self.finish) - manhattan(self.current, self.finish)  # the reward is 1 if \
