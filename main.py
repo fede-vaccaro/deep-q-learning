@@ -19,20 +19,21 @@ def cat(*args):
         return t_list[0]
 
 
-game_dim = 16
+game_dim = 8
 n_episodes = 500
 gamma = 0.95
 e_rate_start = 0.90
 e_rate_end = 0.1
 
+obs_dim = 84  # x 84
 
 def main():
-    dqn = DQN(input_dim=game_dim, use_batch_norm=False)
+    dqn = DQN(input_dim=obs_dim, use_batch_norm=False)
     game = GridGame(dim=game_dim)
 
     device = 'cuda'
-    frame_buffer = FrameBuffer(device=device, frame_dim=game_dim)
-    frame_buffer_target = FrameBuffer(device=device, frame_dim=game_dim)
+    frame_buffer = FrameBuffer(device=device, frame_dim=obs_dim)
+    frame_buffer_target = FrameBuffer(device=device, frame_dim=obs_dim)
 
     mean, std = game.get_stats()
 
@@ -104,7 +105,7 @@ def main():
 
             gt_non_terminal = reward_batch + gamma * Q_then_predicted.max(dim=1)[0]
             gt_terminal = reward_batch
-            gt = torch.where(reward_batch < 0, gt_non_terminal, gt_terminal)
+            gt = torch.where(reward_batch != 2, gt_non_terminal, gt_terminal)
 
             loss = (gt - torch.gather(Q_predicted, 1, actions_batch.unsqueeze(-1))) ** 2
             loss = loss.mean()
@@ -114,7 +115,7 @@ def main():
 
             opt.step()
 
-            if (s + 1) % 100 == 0:
+            if (s + 1) % 200 == 0:
                 print(
                     "Loss at s{}-e{}/{}: {}; current e_rate: {}".format(s + 1, e + 1, n_episodes, loss, current_e_rate))
 
@@ -123,8 +124,8 @@ def main():
                 print("Terminal game!")
                 print("Step per epoch:", s)
                 game = GridGame(dim=game_dim)
-                frame_buffer = FrameBuffer(frame_dim=game_dim, device=device)
-                frame_buffer_target = FrameBuffer(frame_dim=game_dim, device=device)
+                frame_buffer = FrameBuffer(frame_dim=obs_dim, device=device)
+                frame_buffer_target = FrameBuffer(frame_dim=obs_dim, device=device)
                 break
 
         epoch_loss = np.array(epoch_loss).mean()

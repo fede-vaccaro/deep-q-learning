@@ -13,10 +13,12 @@ def manhattan(a, b):
 
 
 class GridGame:
-    def __init__(self, dim=32, start=None, finish=None, n_holes=16):
+    def __init__(self, dim=32, start=None, finish=None, n_holes=None):
         state = np.ones((dim, dim, 3), dtype='float32')
 
         self.side_dim = dim
+        if n_holes is None:
+            n_holes = dim
 
         if (not start) and (not finish):
             start, finish = self.init_randomized_start()
@@ -100,7 +102,6 @@ class GridGame:
             row = self.side_dim - pos_on_side - 1
             col = 0
 
-
         start = (row, col)
         return start
 
@@ -156,9 +157,11 @@ class GridGame:
         return state_grey.flatten().mean(), state_grey.flatten().std()
 
     def get_state(self, rgb=False):
+        state_img = Image.fromarray((self.state * 255.0).astype('uint8'), 'RGB').resize((84, 84))
+        state = np.array(state_img, dtype='float32') / 255.0
         if rgb:
-            return self.state
-        r, g, b = self.state[:, :, 0], self.state[:, :, 1], self.state[:, :, 2]
+            return state
+        r, g, b = state[:, :, 0], state[:, :, 1], state[:, :, 2]
         gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
 
         return gray[np.newaxis, :]

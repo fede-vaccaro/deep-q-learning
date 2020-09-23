@@ -9,13 +9,13 @@ class DQN(nn.Module):
     def __init__(self, input_dim, use_batch_norm):
         super(DQN, self).__init__()
 
-        stride1 = 2
-        kernel_size1 = 4
+        stride1 = 4
+        kernel_size1 = 8
         side_in1 = input_dim
         conv_1_out = (side_in1 - kernel_size1) // stride1 + 1
 
-        stride2 = 1
-        kernel_size2 = 2
+        stride2 = 2
+        kernel_size2 = 4
         side_in2 = conv_1_out
         conv_2_out = (side_in2 - kernel_size2) // stride2 + 1
 
@@ -61,7 +61,7 @@ class DQN(nn.Module):
 
 class ReplayMemory:
 
-    def __init__(self, device, max_dim=50000):
+    def __init__(self, device, max_dim=10000):
         self.device = device
         self.replay_memory = []
         self.max_dim = max_dim
