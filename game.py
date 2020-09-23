@@ -13,7 +13,7 @@ def manhattan(a, b):
 
 
 class GridGame:
-    def __init__(self, dim=32, start=None, finish=None, n_holes=32):
+    def __init__(self, dim=32, start=None, finish=None, n_holes=16):
         state = np.ones((dim, dim, 3), dtype='float32')
 
         self.side_dim = dim
@@ -71,34 +71,36 @@ class GridGame:
         start_side = start_perimeter_pos // self.side_dim
         start_pos_on_side = start_perimeter_pos % self.side_dim
 
-        start = self.get_init_position(start_pos_on_side, start_side)
+        start = self.convert_pos_coordinates(start_pos_on_side, start_side)
 
-        finish_perimeter_pos = (start_perimeter_pos + random.randint(self.side_dim * 2, self.side_dim * 3) - 1) % (
-                self.side_dim * 4 - 1)
+        finish_perimeter_pos = (start_perimeter_pos + random.randint(self.side_dim * 2 - 2,
+                                                                     self.side_dim * 2 + 2) - 1) % (
+                                       self.side_dim * 4 - 1)
         finish_side = finish_perimeter_pos // self.side_dim
         finish_pos_on_side = finish_perimeter_pos % self.side_dim
 
-        finish = self.get_init_position(finish_pos_on_side, finish_side)
+        finish = self.convert_pos_coordinates(finish_pos_on_side, finish_side)
 
         return start, finish
 
-    def get_init_position(self, pos_on_side, side):
+    def convert_pos_coordinates(self, pos_on_side, side):
         row = -1
         col = -1
 
         if side == 0:
             row = 0
+            col = pos_on_side
         elif side == 1:
+            row = pos_on_side
             col = self.side_dim - 1
         elif side == 2:
             row = self.side_dim - 1
+            col = self.side_dim - pos_on_side - 1
         elif side == 3:
+            row = self.side_dim - pos_on_side - 1
             col = 0
 
-        if row == -1:
-            row = pos_on_side
-        if col == -1:
-            col = pos_on_side
+
         start = (row, col)
         return start
 
@@ -127,7 +129,7 @@ class GridGame:
             self.current = self.current[0], max(self.current[1] - 1, 0)
 
         if self.current == self.finish:
-            reward = manhattan(self.start, self.finish)
+            reward = 2  # manhattan(self.start, self.finish)
             self.state[self.current] = (0.0, 0.0, 1.0)
             self.is_terminal = True
         elif self.current == old_state or self.current in self.visited_cells:
@@ -136,7 +138,7 @@ class GridGame:
             reward = -2
         elif self.current in self.holes:
             self.state[self.current] = (1.0, 0.0, 1.0)
-            reward = -3
+            reward = -4
         else:
             self.state[self.current] = (1.0, 0.0, 0.0)
             reward = manhattan(old_state, self.finish) - manhattan(self.current, self.finish)  # the reward is 1 if \
