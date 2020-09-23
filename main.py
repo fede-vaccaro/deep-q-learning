@@ -19,8 +19,8 @@ def cat(*args):
         return t_list[0]
 
 
-game_dim = 32
-n_episodes = 1200
+game_dim = 16
+n_episodes = 500
 gamma = 0.95
 e_rate_start = 0.90
 e_rate_end = 0.1
@@ -46,7 +46,9 @@ def main():
 
     replay_memory = ReplayMemory(device)
 
-    lambda1 = lambda e: max(e_rate_start * (1 - e / n_episodes * 1.5) + e_rate_end * e / n_episodes * 1.5,
+    exploration_stop = 0.5
+    exploration_stop = 1 / exploration_stop
+    lambda1 = lambda e: max(e_rate_start * (1 - e / n_episodes * 1 / exploration_stop) + e_rate_end * e / n_episodes * 1 / exploration_stop,
                             e_rate_end)
     scheduler = LambdaLR(opt, lr_lambda=[lambda1])
     losses = []
