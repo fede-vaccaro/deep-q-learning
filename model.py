@@ -33,6 +33,14 @@ class DQN(nn.Module):
 
         self.use_batch_norm = use_batch_norm
 
+    def get_reg_loss(self, lambda_reg):
+        reg = torch.tensor([0.0])
+        reg = reg.to('cuda')
+        for param in self.parameters():
+            reg += param.norm(2.0).pow(2.0)
+
+        return reg * lambda_reg
+
     def forward(self, x):
         y = self.conv1(x)
         if self.use_batch_norm:

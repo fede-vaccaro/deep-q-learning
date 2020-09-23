@@ -7,7 +7,7 @@ from model import *
 import torch
 import torchvision
 import random
-from tqdm import tqdm
+from test import test
 import matplotlib.pyplot as plt
 
 
@@ -26,6 +26,7 @@ e_rate_start = 0.90
 e_rate_end = 0.1
 
 obs_dim = 84  # x 84
+
 
 def main():
     dqn = DQN(input_dim=obs_dim, use_batch_norm=False)
@@ -48,9 +49,9 @@ def main():
     replay_memory = ReplayMemory(device)
 
     exploration_stop = 0.5
-    exploration_stop = 1 / exploration_stop
-    lambda1 = lambda e: max(e_rate_start * (1 - e / n_episodes * 1 / exploration_stop) + e_rate_end * e / n_episodes * 1 / exploration_stop,
-                            e_rate_end)
+    lambda1 = lambda e: max(
+        e_rate_start * (1 - e / n_episodes * 1 / exploration_stop) + e_rate_end * e / n_episodes * 1 / exploration_stop,
+        e_rate_end)
     scheduler = LambdaLR(opt, lr_lambda=[lambda1])
     losses = []
 
@@ -77,8 +78,7 @@ def main():
             action_rand[act_index] = 1.0
             action_rand = action_rand.unsqueeze(0).to(device)
 
-            current_e_rate = max(e_rate_start * (1 - e / n_episodes * 1.5) + e_rate_end * e / n_episodes * 1.5,
-                                 e_rate_end)
+            current_e_rate = lambda1(e)
             if random.uniform(0.0, 1.0) > current_e_rate:
                 action = action_net
             else:
@@ -108,7 +108,7 @@ def main():
             gt = torch.where(reward_batch != 2, gt_non_terminal, gt_terminal)
 
             loss = (gt - torch.gather(Q_predicted, 1, actions_batch.unsqueeze(-1))) ** 2
-            loss = loss.mean()
+            loss = loss.mean() + dqn.get_reg_loss(1e-5)
             loss.backward()
 
             epoch_loss += [float(loss)]
@@ -148,36 +148,7 @@ def main():
     # save model for testing
     torch.save(dqn.state_dict(), 'dqn_e{}_game_dim{}.ptd'.format(n_episodes, game_dim))
 
-    # play a game and show how the agent acts!
-    game = GridGame(dim=game_dim)
-    frame_buffer = FrameBuffer(device=device, frame_dim=game_dim)
-
-    states = []
-    max_steps = 1000
-
-    dqn.train(False)
-    with torch.no_grad():
-        for i in range(max_steps):
-            state_rgb = Image.fromarray((game.get_state(rgb=True) * 255.0).astype('uint8'), 'RGB').resize((400, 400))
-            states.append(state_rgb)
-
-            if game.is_terminal:
-                print("Agent won in {} steps!".format(i))
-                break
-
-            state = torch.tensor(game.get_state()).contiguous()
-
-            x = preprocess(state).to(device)
-            frame_buffer.add_frame(x)
-            if random.uniform(0.0, 1.0) < e_rate_end / 2.0:
-                action = random.randint(0, 3)
-            else:
-                action = dqn(frame_buffer.get_buffer()).argmax()
-
-            game.action(action)
-
-    states[0].save('match_{}_dim{}.gif'.format(n_episodes, game_dim),
-                   save_all=True, append_images=states[1:], optimize=False, duration=150, loop=0)
+    test(device=device, dqn=dqn, game_dim=game_dim, obs_dim=obs_dim, preprocess=preprocess, draw_gif=True)
 
 
 if __name__ == '__main__':

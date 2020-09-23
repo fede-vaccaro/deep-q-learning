@@ -1,11 +1,13 @@
+import torchvision
+
 from game import GridGame
 from model import *
 from PIL import Image
 
-def test(device, dqn, preprocess, game_dim, draw_gif=True):
+def test(device, dqn, preprocess, obs_dim, game_dim, draw_gif=True):
     # play a game and show how the agent acts!
     game = GridGame(dim=game_dim)
-    frame_buffer = FrameBuffer(device=device, frame_dim=game_dim)
+    frame_buffer = FrameBuffer(device=device, frame_dim=obs_dim)
     states = []
     max_steps = 1000
     dqn.train(False)
@@ -31,3 +33,28 @@ def test(device, dqn, preprocess, game_dim, draw_gif=True):
     if draw_gif:
         states[0].save('match_dim{}.gif'.format(game_dim),
                        save_all=True, append_images=states[1:], optimize=False, duration=150, loop=0)
+    print("Total reward:", game.total_reward)
+
+
+if __name__ == '__main__':
+    device = 'cuda'
+    obs_dim = 84
+    game_dim = 8
+    model_name = 'dqn_e500_game_dim8.ptd'
+
+    dqn = DQN(input_dim=obs_dim, use_batch_norm=False)
+    weights = torch.load(model_name)
+    dqn.load_state_dict(weights)
+    dqn.to(device)
+
+    game = GridGame(dim=game_dim)
+    frame_buffer = FrameBuffer(device=device, frame_dim=obs_dim)
+
+    mean, std = game.get_stats()
+
+    preprocess = torchvision.transforms.Compose([
+        torchvision.transforms.Normalize(mean=[mean], std=[std]),
+    ])
+
+    test(device=device, dqn=dqn, game_dim=game_dim, obs_dim=obs_dim, preprocess=preprocess, draw_gif=True)
+
