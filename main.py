@@ -35,7 +35,7 @@ obs_dim = 84  # x 84
 game_params = {
     'dim': game_dim,
     # 'start': (0, 0),
-    'n_holes': 0
+    'n_holes': 8
 }
 
 
@@ -153,9 +153,9 @@ def main():
                 game = GridGame(**game_params)
                 frame_buffer = FrameBuffer(frame_dim=obs_dim, device=device)
                 frame_buffer_target = FrameBuffer(frame_dim=obs_dim, device=device)
-                break
+                #break
 
-        print("Time for epoch {}:{}s".format(e + 1, int(time.time() - t)))
+        # print("Time for epoch {}:{}s".format(e + 1, int(time.time() - t)))
 
         epoch_loss = np.array(epoch_loss).mean()
         losses += [epoch_loss]

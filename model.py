@@ -84,18 +84,15 @@ class ReplayMemory:
         self.replay_memory += [sample]
 
     def get_sample(self, minibatch_size=32):
-        if self.replay_memory.__len__() > 0:
-            mini_batch = random.sample(self.replay_memory, min(len(self.replay_memory), minibatch_size))
+        mini_batch = random.sample(self.replay_memory, min(len(self.replay_memory), minibatch_size))
 
-            x_batch = torch.cat([x[0] for x in mini_batch], dim=0)
-            actions_batch = torch.cat([x[1] for x in mini_batch], dim=0).to(self.device)
-            x_then_batch = torch.cat([x[2] for x in mini_batch], dim=0)
-            reward_batch = torch.stack([torch.tensor([x[3]], dtype=torch.float32) for x in mini_batch], dim=0).to(
-                self.device)
+        x_batch = torch.cat([x[0] for x in mini_batch], dim=0)
+        actions_batch = torch.cat([x[1] for x in mini_batch], dim=0).to(self.device)
+        x_then_batch = torch.cat([x[2] for x in mini_batch], dim=0)
+        reward_batch = torch.stack([torch.tensor([x[3]], dtype=torch.float32) for x in mini_batch], dim=0).to(
+            self.device)
 
-            return x_batch, actions_batch, x_then_batch, reward_batch
-        else:
-            return None, None, None, None
+        return x_batch, actions_batch, x_then_batch, reward_batch
 
 
 class FrameBuffer:
@@ -116,7 +113,6 @@ class FrameBuffer:
             s_np = state.cpu().numpy()[0]
             plt.imshow(s_np)
             plt.show()
-
 
     def add_frame(self, frame):
         self.mem = self.mem[1:]

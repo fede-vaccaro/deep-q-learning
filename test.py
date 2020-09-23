@@ -41,7 +41,7 @@ if __name__ == '__main__':
     device = 'cuda'
     obs_dim = 84
     game_dim = 8
-    model_name = 'dqn_e500_game_dim8.ptd'
+    model_name = 'dqn_e300_game_dim8.ptd'
 
     game_params = {
         'dim': game_dim,
