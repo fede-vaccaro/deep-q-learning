@@ -8,20 +8,28 @@ import torch.nn.functional as F
 class DQN(nn.Module):
     def __init__(self, input_dim, use_batch_norm):
         super(DQN, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=4, out_channels=32, kernel_size=(3, 3))
-        if use_batch_norm:
-            self.bn1 = nn.BatchNorm2d(32)
-        conv_1_out = input_dim - 3 + 1
 
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(5, 5))
-        if use_batch_norm:
-            self.bn2 = nn.BatchNorm2d(64)
-        conv_2_out = conv_1_out - 5 + 1
-        conv_2_out //= 2  # max pool
+        stride1 = 2
+        kernel_size1 = 4
+        side_in1 = input_dim
+        conv_1_out = (side_in1 - kernel_size1) // stride1 + 1
 
-        self.dense = nn.Linear(in_features=(conv_2_out ** 2) * 64, out_features=256)
-        self.dense2 = nn.Linear(in_features=256, out_features=256)
-        self.dense3 = nn.Linear(in_features=256, out_features=4)
+        stride2 = 1
+        kernel_size2 = 2
+        side_in2 = conv_1_out
+        conv_2_out = (side_in2 - kernel_size2) // stride2 + 1
+
+        self.conv1 = nn.Conv2d(in_channels=4, out_channels=16, kernel_size=kernel_size1, stride=stride1)
+        if use_batch_norm:
+            self.bn1 = nn.BatchNorm2d(16)
+
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=kernel_size2, stride=stride2)
+        if use_batch_norm:
+            self.bn2 = nn.BatchNorm2d(32)
+        # conv_2_out //= 2  # max pool
+
+        self.dense = nn.Linear(in_features=(conv_2_out ** 2) * 32, out_features=256)
+        self.dense2 = nn.Linear(in_features=256, out_features=4)
 
         self.use_batch_norm = use_batch_norm
 
@@ -36,7 +44,7 @@ class DQN(nn.Module):
             y = self.bn2(y)
         y = F.relu(y)
 
-        y = F.max_pool2d(y, 2)
+        # y = F.max_pool2d(y, 2)
 
         # flatten
         batch_size = y.size()[0]
@@ -46,9 +54,6 @@ class DQN(nn.Module):
         y = F.relu(y)
 
         y = self.dense2(y)
-        y = F.relu(y)
-
-        y = self.dense3(y)
         q_scores = y
 
         return q_scores
