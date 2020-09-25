@@ -158,8 +158,7 @@ def main():
 
             s += 1
             if game.is_terminal:
-                print("Terminal game!")
-                print("Step before ending:", game.step_count)
+                print("Terminal game! Step before ending: {}; Reward: {}".format(game.step_count, game.total_reward))
                 game = GridGame(**game_params)
                 frame_buffer = FrameBuffer(frame_dim=obs_dim, device=device)
                 frame_buffer_target = FrameBuffer(frame_dim=obs_dim, device=device)
