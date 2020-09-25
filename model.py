@@ -20,7 +20,7 @@ class DQN(nn.Module):
         side_in2 = conv_1_out
         conv_2_out = (side_in2 - kernel_size2) // stride2 + 1
 
-        self.conv1 = nn.Conv2d(in_channels=4, out_channels=16, kernel_size=kernel_size1, stride=stride1)
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=kernel_size1, stride=stride1)
         if use_batch_norm:
             self.bn1 = nn.BatchNorm2d(16)
 

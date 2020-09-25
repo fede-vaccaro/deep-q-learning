@@ -25,7 +25,7 @@ def cat(*args):
 
 game_dim = 16
 n_episodes = 300
-gamma = 0.99
+gamma = 0.90
 e_rate_start = 0.90
 e_rate_end = 0.1
 swap_freq = 10
@@ -37,7 +37,7 @@ use_batch_norm = False
 game_params = {
     'dim': game_dim,
     # 'start': (0, 0),
-    'n_holes': 8
+    'n_holes': 16
 }
 
 
@@ -54,13 +54,10 @@ def main():
     dqn_target.__setattr__('name', 'target')
 
     device = 'cuda'
-    frame_buffer = FrameBuffer(device=device, frame_dim=obs_dim)
-    frame_buffer_target = FrameBuffer(device=device, frame_dim=obs_dim)
-
-    mean, std = game.get_stats()
 
     preprocess = torchvision.transforms.Compose([
-        torchvision.transforms.Normalize(mean=[mean], std=[std]),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
     opt = torch.optim.Adam(lr=1e-4, params=dqn.parameters())
@@ -93,14 +90,11 @@ def main():
         for s in tqdm_:
             # while not game.is_terminal:
             opt.zero_grad()
-            state = torch.tensor(game.get_state()).contiguous()  # .permute((2, 0, 1))
-            x = preprocess(state).to(device)
-
-            frame_buffer.add_frame(x)
-            frame_buffer_target.add_frame(x)
+            state = game.get_state()  # .permute((2, 0, 1))
+            x = preprocess(state).to(device).unsqueeze(0)
 
             dqn.train(False)
-            action_net = dqn(frame_buffer.get_buffer())
+            action_net = dqn(x)
 
             # random action
             act_index = random.randint(0, 3)
@@ -116,12 +110,10 @@ def main():
 
             reward = game.action(action.detach().cpu().argmax())
 
-            state = torch.tensor(game.get_state()).contiguous()
+            state = game.get_state()
+            x_after = preprocess(state).to(device).unsqueeze(0)
 
-            x_after = preprocess(state).to(device)
-            frame_buffer_target.add_frame(x_after)
-
-            replay_memory.add_sample(frame_buffer.get_buffer(), action.argmax(dim=1), frame_buffer_target.get_buffer(),
+            replay_memory.add_sample(x, action.argmax(dim=1), x_after,
                                      reward)
 
             # sample from replay memory
@@ -145,23 +137,14 @@ def main():
 
             opt.step()
 
-            # if (s + 1) % 200 == 0:
-            #     print(
-            #         "Loss at s{}-e{}/{}: {}; current e_rate: {}".format(s + 1, e + 1, n_episodes, loss, current_e_rate))
-            #     # frame_buffer.view_buffer()
-            #     # frame_buffer_target.view_buffer()
-            #     # programPause = raw_input("Press the <ENTER> key to continue...")
-
             tqdm_.set_description(
                 "Loss at s{}-e{}/{}: {}; current e_rate: {}".format(s + 1, e + 1, n_episodes, float(loss),
                                                                     current_e_rate))
 
             if game.is_terminal:
                 print("Terminal game! Step before ending: {}; Reward: {}".format(game.step_count, game.total_reward))
-                game = GridGame(**game_params)
-                frame_buffer = FrameBuffer(frame_dim=obs_dim, device=device)
-                frame_buffer_target = FrameBuffer(frame_dim=obs_dim, device=device)
                 epoch_reward.append(game.total_reward)
+                game = GridGame(**game_params)
                 # break
 
         if len(epoch_reward) > 0:
@@ -187,13 +170,13 @@ def main():
 
     plt.plot(losses)
     plt.ylabel('loss')
-    plt.savefig('loss_per_epoch_{}.pdf'.format(n_episodes))
-    #plt.show()
+    plt.savefig('loss_per_epoch_{}.pdf'.format(n_episodes, "no_dql" if not use_dql else ""))
+    # plt.show()
 
     plt.plot(rewards)
     plt.ylabel('rewards')
-    plt.savefig('rewards_per_epoch_{}.pdf'.format(n_episodes))
-    #plt.show()
+    plt.savefig('rewards_per_epoch_{}.pdf'.format(n_episodes, "no_dql" if not use_dql else ""))
+    # plt.show()
 
     if dqn.name == 'target':
         dqn = dqn_target

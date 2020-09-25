@@ -162,12 +162,12 @@ class GridGame:
     def get_state(self, rgb=False):
         state_img = Image.fromarray((self.state * 255.0).astype('uint8'), 'RGB').resize((84, 84), Image.NEAREST)
         state = np.array(state_img, dtype='float32') / 255.0
-        if rgb:
-            return state
-        r, g, b = state[:, :, 0], state[:, :, 1], state[:, :, 2]
-        gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
+        #if rgb:
+        #    return state
+        #r, g, b = state[:, :, 0], state[:, :, 1], state[:, :, 2]
+        #gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
 
-        return gray[np.newaxis, :]
+        return state_img#state[np.newaxis, :]
 
 
 if __name__ == '__main__':

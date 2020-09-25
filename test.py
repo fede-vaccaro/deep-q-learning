@@ -8,27 +8,25 @@ from PIL import Image
 def test(device, dqn, preprocess, obs_dim, game_params, draw_gif=True):
     # play a game and show how the agent acts!
     game = GridGame(**game_params)
-    frame_buffer = FrameBuffer(device=device, frame_dim=obs_dim)
     states = []
     max_steps = 1000
     dqn.train(False)
     with torch.no_grad():
         for i in range(max_steps):
-            state_rgb = Image.fromarray((game.get_state(rgb=True) * 255.0).astype('uint8'), 'RGB').resize((400, 400), Image.NEAREST)
+            state_rgb = game.get_state(rgb=True).resize((400, 400), Image.NEAREST)
             states.append(state_rgb)
 
             if game.is_terminal:
                 print("Agent won in {} steps!".format(i))
                 break
 
-            state = torch.tensor(game.get_state()).contiguous()
+            state = game.get_state()
 
-            x = preprocess(state).to(device)
-            frame_buffer.add_frame(x)
+            x = preprocess(state).to(device).unsqueeze(0)
             if random.uniform(0.0, 1.0) < 0.1 / 2.0:
                 action = random.randint(0, 3)
             else:
-                action = dqn(frame_buffer.get_buffer()).argmax()
+                action = dqn(x).argmax()
 
             game.action(action)
     if draw_gif:
@@ -40,13 +38,13 @@ def test(device, dqn, preprocess, obs_dim, game_params, draw_gif=True):
 if __name__ == '__main__':
     device = 'cuda'
     obs_dim = 84
-    game_dim = 8
-    model_name = 'dqn_e300_game_dim8.ptd'
+    game_dim = 16
+    model_name = 'dqn_e300_game_dim16.ptd'
 
     game_params = {
         'dim': game_dim,
         # 'start': (0, 0),
-        'n_holes': 0
+        'n_holes': 16
     }
 
     dqn = DQN(input_dim=obs_dim, use_batch_norm=False)
@@ -57,10 +55,9 @@ if __name__ == '__main__':
     game = GridGame(dim=game_dim)
     frame_buffer = FrameBuffer(device=device, frame_dim=obs_dim)
 
-    mean, std = game.get_stats()
-
     preprocess = torchvision.transforms.Compose([
-        torchvision.transforms.Normalize(mean=[mean], std=[std]),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
     test(device=device, dqn=dqn, game_params=game_params, obs_dim=obs_dim, preprocess=preprocess, draw_gif=True)
