@@ -14,7 +14,7 @@ def test(device, dqn, preprocess, obs_dim, game_params, draw_gif=True):
     dqn.train(False)
     with torch.no_grad():
         for i in range(max_steps):
-            state_rgb = Image.fromarray((game.get_state(rgb=True) * 255.0).astype('uint8'), 'RGB').resize((400, 400))
+            state_rgb = Image.fromarray((game.get_state(rgb=True) * 255.0).astype('uint8'), 'RGB').resize((400, 400), Image.NEAREST)
             states.append(state_rgb)
 
             if game.is_terminal:

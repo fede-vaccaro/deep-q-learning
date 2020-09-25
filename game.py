@@ -137,13 +137,13 @@ class GridGame:
         elif self.current == old_state or self.current in self.visited_cells:
             self.state[self.current] = (1.0, 0.0, 0.0)
             # reward = -manhattan(self.current, self.finish)/self.dim*2.0
-            reward = -2
+            reward = -1
         elif self.current in self.holes:
             self.state[self.current] = (1.0, 0.0, 1.0)
-            reward = -4
+            reward = -1
         else:
             self.state[self.current] = (1.0, 0.0, 0.0)
-            reward = manhattan(old_state, self.finish) - manhattan(self.current, self.finish)  # the reward is 1 if \
+            reward = max(manhattan(old_state, self.finish) - manhattan(self.current, self.finish), 0)  # the reward is 1 if \
             # the agent get nearer, -1 otherwise
 
         if old_state in self.holes and (old_state != self.current):
@@ -158,7 +158,7 @@ class GridGame:
         return state_grey.flatten().mean(), state_grey.flatten().std()
 
     def get_state(self, rgb=False):
-        state_img = Image.fromarray((self.state * 255.0).astype('uint8'), 'RGB').resize((84, 84))
+        state_img = Image.fromarray((self.state * 255.0).astype('uint8'), 'RGB').resize((84, 84), Image.NEAREST)
         state = np.array(state_img, dtype='float32') / 255.0
         if rgb:
             return state

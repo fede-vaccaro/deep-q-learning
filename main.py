@@ -23,7 +23,7 @@ def cat(*args):
         return t_list[0]
 
 
-game_dim = 8
+game_dim = 16
 n_episodes = 300
 gamma = 0.99
 e_rate_start = 0.90
@@ -71,10 +71,13 @@ def main():
         e_rate_start * (1 - e / n_episodes * 1 / exploration_stop) + e_rate_end * e / n_episodes * 1 / exploration_stop,
         e_rate_end)
     scheduler = LambdaLR(opt, lr_lambda=[lambda1])
+
     losses = []
+    rewards = []
 
     for e in range(n_episodes):
         # reset game!
+        epoch_reward = []
 
         # for s in range(max_steps_per_episode):
         epoch_loss = []
@@ -153,8 +156,10 @@ def main():
                 game = GridGame(**game_params)
                 frame_buffer = FrameBuffer(frame_dim=obs_dim, device=device)
                 frame_buffer_target = FrameBuffer(frame_dim=obs_dim, device=device)
+                epoch_reward.append(game.total_reward)
                 #break
 
+        rewards.append(np.array(epoch_reward).mean())
         print("Time for epoch {}:{}s".format(e + 1, int(time.time() - t)))
 
         epoch_loss = np.array(epoch_loss).mean()
@@ -176,7 +181,12 @@ def main():
 
     plt.plot(losses)
     plt.ylabel('loss')
-    plt.savefig('training_{}.pdf'.format(n_episodes))
+    plt.savefig('loss_per_epoch_{}.pdf'.format(n_episodes))
+    plt.show()
+
+    plt.plot(rewards)
+    plt.ylabel('rewards')
+    plt.savefig('rewards_per_epoch_{}.pdf'.format(n_episodes))
     plt.show()
 
     if dqn.name == 'target':
