@@ -156,7 +156,6 @@ def main():
                 "Loss at s{}-e{}/{}: {}; current e_rate: {}".format(s + 1, e + 1, n_episodes, float(loss),
                                                                     current_e_rate))
 
-            s += 1
             if game.is_terminal:
                 print("Terminal game! Step before ending: {}; Reward: {}".format(game.step_count, game.total_reward))
                 game = GridGame(**game_params)
@@ -165,7 +164,8 @@ def main():
                 epoch_reward.append(game.total_reward)
                 # break
 
-        rewards.append(np.array(epoch_reward).mean())
+        if len(epoch_reward) > 0:
+            rewards.append(np.array(epoch_reward).mean())
         print("Time for epoch {}:{}s".format(e + 1, int(time.time() - t)))
 
         epoch_loss = np.array(epoch_loss).mean()
@@ -188,12 +188,12 @@ def main():
     plt.plot(losses)
     plt.ylabel('loss')
     plt.savefig('loss_per_epoch_{}.pdf'.format(n_episodes))
-    plt.show()
+    #plt.show()
 
     plt.plot(rewards)
     plt.ylabel('rewards')
     plt.savefig('rewards_per_epoch_{}.pdf'.format(n_episodes))
-    plt.show()
+    #plt.show()
 
     if dqn.name == 'target':
         dqn = dqn_target
