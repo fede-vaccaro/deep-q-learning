@@ -31,6 +31,8 @@ e_rate_end = 0.1
 swap_freq = 10
 
 obs_dim = 84  # x 84
+use_dql = True
+use_batch_norm = False
 
 game_params = {
     'dim': game_dim,
@@ -40,8 +42,12 @@ game_params = {
 
 
 def main():
-    dqn = DQN(input_dim=obs_dim, use_batch_norm=False)
-    dqn_target = DQN(input_dim=obs_dim, use_batch_norm=False)
+    dqn = DQN(input_dim=obs_dim, use_batch_norm=use_batch_norm)
+    if use_dql:
+        dqn_target = DQN(input_dim=obs_dim, use_batch_norm=use_batch_norm)
+    else:
+        dqn_target = dqn
+
     game = GridGame(**game_params)
 
     dqn.__setattr__('name', 'net')
@@ -58,7 +64,8 @@ def main():
     ])
 
     opt = torch.optim.Adam(lr=1e-4, params=dqn.parameters())
-    target_opt = torch.optim.Adam(lr=1e-4, params=dqn_target.parameters())
+    if use_dql:
+        target_opt = torch.optim.Adam(lr=1e-4, params=dqn_target.parameters())
 
     dqn.to(device)
     dqn_target.to(device)
@@ -157,7 +164,7 @@ def main():
                 frame_buffer = FrameBuffer(frame_dim=obs_dim, device=device)
                 frame_buffer_target = FrameBuffer(frame_dim=obs_dim, device=device)
                 epoch_reward.append(game.total_reward)
-                #break
+                # break
 
         rewards.append(np.array(epoch_reward).mean())
         print("Time for epoch {}:{}s".format(e + 1, int(time.time() - t)))
@@ -174,7 +181,7 @@ def main():
 
             # scheduler.step()
 
-        if (e + 1) % swap_freq == 0:
+        if ((e + 1) % swap_freq == 0) and use_dql:
             print("SWAPPING NETWORKS & OPTIMIZERS!")
             dqn, dqn_target = dqn_target, dqn
             opt, target_opt = target_opt, opt
