@@ -24,15 +24,15 @@ def cat(*args):
 
 
 game_dim = 16
-n_episodes = 300
+n_episodes = 500
 gamma = 0.90
 e_rate_start = 0.90
 e_rate_end = 0.1
 swap_freq = 10
 
 obs_dim = 84  # x 84
-use_dql = True
-use_batch_norm = False
+use_dql = False
+use_batch_norm = True
 
 game_params = {
     'dim': game_dim,
@@ -79,6 +79,7 @@ def main():
     losses = []
     rewards = []
 
+    train_t0 = time.time()
     for e in range(n_episodes):
         # reset game!
         epoch_reward = []
@@ -168,21 +169,25 @@ def main():
             dqn, dqn_target = dqn_target, dqn
             opt, target_opt = target_opt, opt
 
+    print("Training time: {} minutes".format((train_t0 - time.time())//60))
+
+    description = "dql" if use_dql else ""
+
     plt.plot(losses)
     plt.ylabel('loss')
-    plt.savefig('loss_per_epoch_{}.pdf'.format(n_episodes, "no_dql" if not use_dql else ""))
+    plt.savefig('loss_per_epoch_{}_{}.pdf'.format(n_episodes, description))
     # plt.show()
 
     plt.plot(rewards)
     plt.ylabel('rewards')
-    plt.savefig('rewards_per_epoch_{}.pdf'.format(n_episodes, "no_dql" if not use_dql else ""))
+    plt.savefig('rewards_per_epoch_{}_{}.pdf'.format(n_episodes, description))
     # plt.show()
 
     if dqn.name == 'target':
         dqn = dqn_target
 
     # save model for testing
-    torch.save(dqn.state_dict(), 'dqn_e{}_game_dim{}.ptd'.format(n_episodes, game_dim))
+    torch.save(dqn.state_dict(), 'dqn_e{}_game_dim{}_{}.ptd'.format(n_episodes, game_dim, description))
 
     test(device=device, dqn=dqn, game_params=game_params, obs_dim=obs_dim, preprocess=preprocess, draw_gif=True)
 

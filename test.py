@@ -13,7 +13,7 @@ def test(device, dqn, preprocess, obs_dim, game_params, draw_gif=True):
     dqn.train(False)
     with torch.no_grad():
         for i in range(max_steps):
-            state_rgb = game.get_state(rgb=True).resize((400, 400), Image.NEAREST)
+            state_rgb = game.get_state().resize((400, 400), Image.NEAREST)
             states.append(state_rgb)
 
             if game.is_terminal:
@@ -23,7 +23,7 @@ def test(device, dqn, preprocess, obs_dim, game_params, draw_gif=True):
             state = game.get_state()
 
             x = preprocess(state).to(device).unsqueeze(0)
-            if random.uniform(0.0, 1.0) < 0.1 / 2.0:
+            if random.uniform(0.0, 1.0) < 0.1/2:
                 action = random.randint(0, 3)
             else:
                 action = dqn(x).argmax()
@@ -51,9 +51,6 @@ if __name__ == '__main__':
     weights = torch.load(model_name)
     dqn.load_state_dict(weights)
     dqn.to(device)
-
-    game = GridGame(dim=game_dim)
-    frame_buffer = FrameBuffer(device=device, frame_dim=obs_dim)
 
     preprocess = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
