@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-
+from collections import deque
 
 class DQN(nn.Module):
     def __init__(self, input_dim, use_batch_norm):
@@ -72,19 +72,19 @@ class ReplayMemory:
 
     def __init__(self, device, max_dim=10000):
         self.device = device
-        self.replay_memory = []
+        self.replay_memory = deque(maxlen=max_dim)
         self.max_dim = max_dim
 
     def add_sample(self, x, action, x_then, r):
         sample = (x, action, x_then, r)
-        if len(self.replay_memory) == self.max_dim:
-            random.shuffle(self.replay_memory)
-            self.replay_memory = self.replay_memory[1:]
+        #if len(self.replay_memory) == self.max_dim:
+        #    random.shuffle(self.replay_memory)
+        #    self.replay_memory = self.replay_memory[1:]
 
-        self.replay_memory += [sample]
+        self.replay_memory.append(sample)
 
     def get_sample(self, minibatch_size=32):
-        mini_batch = random.sample(self.replay_memory, min(len(self.replay_memory), minibatch_size))
+        mini_batch = random.sample(list(self.replay_memory), min(len(self.replay_memory), minibatch_size))
 
         x_batch = torch.cat([x[0] for x in mini_batch], dim=0)
         actions_batch = torch.cat([x[1] for x in mini_batch], dim=0).to(self.device)
