@@ -13,6 +13,7 @@ import torchvision
 import random
 from test import test
 import matplotlib.pyplot as plt
+import argparse
 
 
 def cat(*args):
@@ -30,8 +31,17 @@ e_rate_start = 0.90
 e_rate_end = 0.1
 swap_freq = 10
 
+ap = argparse.ArgumentParser()
+
+# ap.add_argument("-dv", "--device", type=str, default='cpu',
+#                help="Select between 'gpu' or 'cpu'. If cuda is not available, it will run on CPU by default.")
+ap.add_argument("-d", "--doubleq", action='store_true', default=False,
+                help="Use double Q-learning")
+
+args = vars(ap.parse_args())
+
 obs_dim = 84  # x 84
-use_dql = False
+use_dql = args['doubleq']
 use_batch_norm = True
 
 game_params = {
@@ -169,7 +179,7 @@ def main():
             dqn, dqn_target = dqn_target, dqn
             opt, target_opt = target_opt, opt
 
-    print("Training time: {} minutes".format((train_t0 - time.time())//60))
+    print("Training time: {} minutes".format((train_t0 - time.time()) // 60))
 
     description = "dql" if use_dql else ""
 
