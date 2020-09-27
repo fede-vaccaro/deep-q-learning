@@ -156,6 +156,7 @@ def main():
                 print("Terminal game! Step before ending: {}; Reward: {}".format(game.step_count, game.total_reward))
                 epoch_reward.append(game.total_reward)
                 game = GridGame(**game_params)
+                game.visualize_state()
                 # break
 
         if len(epoch_reward) > 0:
@@ -186,12 +187,12 @@ def main():
     plt.plot(losses)
     plt.ylabel('loss')
     plt.savefig('loss_per_epoch_{}_{}.pdf'.format(n_episodes, description))
-    # plt.show()
+
+    plt.close()
 
     plt.plot(rewards)
     plt.ylabel('rewards')
     plt.savefig('rewards_per_epoch_{}_{}.pdf'.format(n_episodes, description))
-    # plt.show()
 
     if dqn.name == 'target':
         dqn = dqn_target

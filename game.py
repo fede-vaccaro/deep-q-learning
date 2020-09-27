@@ -46,12 +46,13 @@ class GridGame:
     def add_holes(self, n_holes):
         holes_set = set()
         unavailable = set()
+        next_seed = random.randint(0, 9999999)
         random.seed(42)
         for i in range(n_holes):
             row = random.randint(0, self.side_dim - 1)
             col = random.randint(0, self.side_dim - 1)
             holes_set.add((row, col))
-        random.seed(4242)
+        random.seed(next_seed)
 
         for hole in holes_set:
             if hole != self.start and hole != self.finish:

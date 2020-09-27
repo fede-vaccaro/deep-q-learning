@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from collections import deque
 
+
 class DQN(nn.Module):
     def __init__(self, input_dim, use_batch_norm):
         super(DQN, self).__init__()
@@ -53,8 +54,6 @@ class DQN(nn.Module):
             y = self.bn2(y)
         y = F.relu(y)
 
-        # y = F.max_pool2d(y, 2)
-
         # flatten
         batch_size = y.size()[0]
         y = y.view(batch_size, -1)
@@ -62,6 +61,38 @@ class DQN(nn.Module):
         y = self.dense(y)
         y = F.relu(y)
 
+        y = self.dense2(y)
+        q_scores = y
+
+        return q_scores
+
+
+class MlpDQN(nn.Module):
+    def __init__(self, input_dim, use_batch_norm):
+        super(MlpDQN, self).__init__()
+
+        self.dense = nn.Linear(in_features=input_dim, out_features=1024)
+
+        if self.use_batch_norm:
+            self.bn = nn.BatchNorm1d(1024)
+
+        self.dense2 = nn.Linear(in_features=1024, out_features=4)
+
+        self.use_batch_norm = use_batch_norm
+
+    def get_reg_loss(self, lambda_reg):
+        return (self.dense.weight.norm(p=2.0).pow(2.0) + self.dense2.norm(p=2.0).pow(2.0)) * lambda_reg
+
+    def forward(self, x):
+        # flatten
+        batch_size = x.size()[0]
+        x = x.view(batch_size, -1)
+
+        y = self.dense(x)
+        if self.use_batch_norm:
+            y = self.bn2(y)
+
+        y = F.relu(y)
         y = self.dense2(y)
         q_scores = y
 
@@ -77,7 +108,7 @@ class ReplayMemory:
 
     def add_sample(self, x, action, x_then, r):
         sample = (x, action, x_then, r)
-        #if len(self.replay_memory) == self.max_dim:
+        # if len(self.replay_memory) == self.max_dim:
         #    random.shuffle(self.replay_memory)
         #    self.replay_memory = self.replay_memory[1:]
 
