@@ -7,7 +7,7 @@ from model import *
 from PIL import Image
 
 
-def test(device, dqn, preprocess, obs_dim, game_params, draw_gif=True):
+def test(device, dqn, preprocess, game_params, draw_gif=True):
     # play a game and show how the agent acts!
     game = GridGame(**game_params)
     states = []
@@ -42,7 +42,6 @@ def test(device, dqn, preprocess, obs_dim, game_params, draw_gif=True):
 
 if __name__ == '__main__':
     device = 'cuda'
-    obs_dim = 84
     game_dim = 16
     model_name = 'dqn_e500_game_dim16_.ptd'
     print("Testing", model_name)
@@ -53,7 +52,7 @@ if __name__ == '__main__':
         'n_holes': 16
     }
 
-    dqn = DQN(input_dim=obs_dim, use_batch_norm=True)
+    dqn = DQN(input_dim=game_dim**2*2, use_batch_norm=True)
     weights = torch.load(model_name)
     dqn.load_state_dict(weights)
     dqn.to(device)
@@ -64,7 +63,7 @@ if __name__ == '__main__':
     ])
     rewards = []
     for i in tqdm(range(1000)):
-        r = test(device=device, dqn=dqn, game_params=game_params, obs_dim=obs_dim, preprocess=preprocess,
+        r = test(device=device, dqn=dqn, game_params=game_params, preprocess=preprocess,
                  draw_gif=False)
         rewards += [r]
 

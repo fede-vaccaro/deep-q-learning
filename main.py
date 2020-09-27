@@ -52,9 +52,9 @@ game_params = {
 
 
 def main():
-    dqn = DQN(input_dim=obs_dim, use_batch_norm=use_batch_norm)
+    dqn = MlpDQN(input_dim=game_dim**2*3, use_batch_norm=use_batch_norm)
     if use_dql:
-        dqn_target = DQN(input_dim=obs_dim, use_batch_norm=use_batch_norm)
+        dqn_target = MlpDQN(input_dim=game_dim**2*3, use_batch_norm=use_batch_norm)
     else:
         dqn_target = dqn
 
@@ -66,8 +66,9 @@ def main():
     device = 'cuda'
 
     preprocess = torchvision.transforms.Compose([
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        torch.Tensor
+        # torchvision.transforms.ToTensor(),
+        # torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
     opt = torch.optim.Adam(lr=1e-4, params=dqn.parameters())
@@ -101,7 +102,7 @@ def main():
         for s in tqdm_:
             # while not game.is_terminal:
             opt.zero_grad()
-            state = game.get_state()  # .permute((2, 0, 1))
+            state = game.get_state(upscale=False)  # .permute((2, 0, 1))
             x = preprocess(state).to(device).unsqueeze(0)
 
             dqn.train(False)
@@ -121,7 +122,7 @@ def main():
 
             reward = game.action(action.detach().cpu().argmax())
 
-            state = game.get_state()
+            state = game.get_state(upscale=False)
             x_after = preprocess(state).to(device).unsqueeze(0)
 
             replay_memory.add_sample(x, action.argmax(dim=1), x_after,
@@ -130,7 +131,11 @@ def main():
             # sample from replay memory
             x_batch, actions_batch, x_then_batch, reward_batch = replay_memory.get_sample(32)
 
-            dqn.train(True)
+            if len(x_batch) > 1:
+                dqn.train(True)
+            else:
+                dqn.train(False)
+
             Q_predicted = dqn(x_batch)
             with torch.no_grad():
                 dqn_target.train(False)
@@ -156,7 +161,6 @@ def main():
                 print("Terminal game! Step before ending: {}; Reward: {}".format(game.step_count, game.total_reward))
                 epoch_reward.append(game.total_reward)
                 game = GridGame(**game_params)
-                game.visualize_state()
                 # break
 
         if len(epoch_reward) > 0:
@@ -200,7 +204,7 @@ def main():
     # save model for testing
     torch.save(dqn.state_dict(), 'dqn_e{}_game_dim{}_{}.ptd'.format(n_episodes, game_dim, description))
 
-    test(device=device, dqn=dqn, game_params=game_params, obs_dim=obs_dim, preprocess=preprocess, draw_gif=True)
+    test(device=device, dqn=dqn, game_params=game_params, preprocess=preprocess, draw_gif=True)
 
 
 if __name__ == '__main__':

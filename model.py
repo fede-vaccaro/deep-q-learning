@@ -70,6 +70,7 @@ class DQN(nn.Module):
 class MlpDQN(nn.Module):
     def __init__(self, input_dim, use_batch_norm):
         super(MlpDQN, self).__init__()
+        self.use_batch_norm = use_batch_norm
 
         self.dense = nn.Linear(in_features=input_dim, out_features=1024)
 
@@ -78,10 +79,13 @@ class MlpDQN(nn.Module):
 
         self.dense2 = nn.Linear(in_features=1024, out_features=4)
 
-        self.use_batch_norm = use_batch_norm
-
     def get_reg_loss(self, lambda_reg):
-        return (self.dense.weight.norm(p=2.0).pow(2.0) + self.dense2.norm(p=2.0).pow(2.0)) * lambda_reg
+        reg = torch.tensor([0.0])
+        reg = reg.to('cuda')
+        for param in self.parameters():
+            reg += param.norm(2.0).pow(2.0)
+
+        return reg * lambda_reg
 
     def forward(self, x):
         # flatten
@@ -90,7 +94,7 @@ class MlpDQN(nn.Module):
 
         y = self.dense(x)
         if self.use_batch_norm:
-            y = self.bn2(y)
+            y = self.bn(y)
 
         y = F.relu(y)
         y = self.dense2(y)

@@ -146,7 +146,8 @@ class GridGame:
             reward = -1
         else:
             self.state[self.current] = (1.0, 0.0, 0.0)
-            reward = max(manhattan(old_state, self.finish) - manhattan(self.current, self.finish), 0)  # the reward is 1 if \
+            reward = max(manhattan(old_state, self.finish) - manhattan(self.current, self.finish),
+                         0)  # the reward is 1 if \
             # the agent get nearer, -1 otherwise
 
         if old_state in self.holes and (old_state != self.current):
@@ -154,27 +155,28 @@ class GridGame:
 
         self.step_count += 1
         self.total_reward += reward
+
+        if self.total_reward < -300.0:
+            self.is_terminal = True
+
         return reward
 
     def get_stats(self):
         state_grey = self.get_state()
         return state_grey.flatten().mean(), state_grey.flatten().std()
 
-    def get_state(self, rgb=False):
-        state_img = Image.fromarray((self.state * 255.0).astype('uint8'), 'RGB').resize((84, 84), Image.NEAREST)
-        state = np.array(state_img, dtype='float32') / 255.0
-        #if rgb:
-        #    return state
-        #r, g, b = state[:, :, 0], state[:, :, 1], state[:, :, 2]
-        #gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
-
-        return state_img#state[np.newaxis, :]
+    def get_state(self, upscale):
+        if upscale:
+            state_out = Image.fromarray((self.state * 255.0).astype('uint8'), 'RGB').resize((84, 84), Image.NEAREST)
+        else:
+            state_out = (self.state - 0.5) * 2.0
+        return state_out.flatten()
 
 
 if __name__ == '__main__':
     game_params = {
         'dim': 8,
-#        'start': (0, 0),
+        #        'start': (0, 0),
         'n_holes': 8
     }
 
