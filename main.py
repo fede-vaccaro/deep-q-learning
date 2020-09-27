@@ -25,7 +25,6 @@ def cat(*args):
 
 
 game_dim = 16
-n_episodes = 500
 gamma = 0.90
 e_rate_start = 0.90
 e_rate_end = 0.1
@@ -43,6 +42,8 @@ args = vars(ap.parse_args())
 obs_dim = 84  # x 84
 use_dql = args['doubleq']
 use_batch_norm = True
+
+n_episodes = 1000 if use_dql else 500
 
 game_params = {
     'dim': game_dim,
