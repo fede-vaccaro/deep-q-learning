@@ -80,10 +80,10 @@ class MlpDQN(nn.Module):
         self.dense2 = nn.Linear(in_features=1024, out_features=4)
 
     def get_reg_loss(self, lambda_reg):
-        reg = torch.tensor([0.0])
+        reg = torch.tensor([0.0], requires_grad=True)
         reg = reg.to('cuda')
         for param in self.parameters():
-            reg += param.norm(2.0).pow(2.0)
+            reg += param.norm(2.0)#.pow(2.0)
 
         return reg * lambda_reg
 

@@ -72,7 +72,7 @@ def main():
         # torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
-    opt = torch.optim.Adam(lr=1e-4, params=dqn.parameters())
+    opt = torch.optim.Adam(lr=1e-4, params=dqn.parameters(), weight_decay=1e-6)
     if use_dql:
         target_opt = torch.optim.Adam(lr=1e-4, params=dqn_target.parameters())
 
@@ -147,7 +147,7 @@ def main():
             gt = torch.where(reward_batch != 2, gt_non_terminal, gt_terminal)
 
             loss = (gt - torch.gather(Q_predicted, 1, actions_batch.unsqueeze(-1))) ** 2
-            loss = loss.mean() + dqn.get_reg_loss(1e-5)
+            loss = loss.mean() #+ dqn.get_reg_loss(1e-5)
             loss.backward()
 
             epoch_loss += [float(loss)]
@@ -189,7 +189,7 @@ def main():
 
     description = "dql" if use_dql else ""
 
-    plt.plot(losses)
+    plt.plot(losses[10:])
     plt.ylabel('loss')
     plt.savefig('loss_per_epoch_{}_{}.pdf'.format(n_episodes, description))
 

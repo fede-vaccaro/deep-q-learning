@@ -60,12 +60,18 @@ if __name__ == '__main__':
     preprocess = torchvision.transforms.Compose([
         torch.Tensor
     ])
-    rewards = []
-    for i in tqdm(range(1000)):
-        r = test(device=device, dqn=dqn, game_params=game_params, preprocess=preprocess,
-                 draw_gif=False)
-        rewards += [r]
+    draw_gif = False
 
-    rewards = np.array(rewards)
-    print("Mean reward: {}".format(rewards.mean()))
-    print("Num positive reward: {}/{}".format(len(rewards[rewards > 0]), len(rewards)))
+    if not draw_gif:
+        rewards = []
+        for i in tqdm(range(1000)):
+            r = test(device=device, dqn=dqn, game_params=game_params, preprocess=preprocess,
+                     draw_gif=draw_gif)
+            rewards += [r]
+
+        rewards = np.array(rewards)
+        print("Mean reward: {}".format(rewards.mean()))
+        print("Num positive reward: {}/{}".format(len(rewards[rewards > 0]), len(rewards)))
+    else:
+        print("Total reward", test(device=device, dqn=dqn, game_params=game_params, preprocess=preprocess,
+                     draw_gif=draw_gif))

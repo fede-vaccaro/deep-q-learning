@@ -170,7 +170,8 @@ class GridGame:
             state_out = Image.fromarray((self.state * 255.0).astype('uint8'), 'RGB').resize((84, 84), Image.NEAREST)
         else:
             state_out = (self.state - 0.5) * 2.0
-        return state_out.flatten()
+            state_out = state_out.flatten()
+        return state_out
 
 
 if __name__ == '__main__':
