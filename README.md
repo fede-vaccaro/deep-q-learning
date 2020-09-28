@@ -6,3 +6,8 @@ From
 
 The game is a simple "GridWorld" style game, where the agent has to move the green square to the red square, 
 in a minimum number of steps.
+
+<p align="center">
+  <img src="https://imgur.com/btJfkjD.gif">
+</p>
+
