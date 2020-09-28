@@ -105,7 +105,7 @@ class MlpDQN(nn.Module):
 
 class ReplayMemory:
 
-    def __init__(self, device, max_dim=10000):
+    def __init__(self, device, max_dim=100000):
         self.device = device
         self.replay_memory = deque(maxlen=max_dim)
         self.max_dim = max_dim

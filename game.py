@@ -156,7 +156,7 @@ class GridGame:
         self.step_count += 1
         self.total_reward += reward
 
-        if self.total_reward < -300.0:
+        if self.total_reward < -500.0:
             self.is_terminal = True
 
         return reward
