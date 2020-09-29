@@ -43,7 +43,7 @@ def test(device, dqn, preprocess, game_params, draw_gif=True):
 if __name__ == '__main__':
     device = 'cuda'
     game_dim = 16
-    model_name = 'dqn_e500_game_dim16_.ptd'
+    model_name = 'dqn_gdim-16_gamma-0.85_nepisodes-500_explorationstop-0.25_b-32_dql-True.ptd'
     print("Testing", model_name)
 
     game_params = {
@@ -52,7 +52,7 @@ if __name__ == '__main__':
         'n_holes': 16
     }
 
-    dqn = MlpDQN(input_dim=game_dim**2*3, use_batch_norm=True)
+    dqn = MlpDQN(input_dim=game_dim ** 2 * 3, use_batch_norm=True)
     weights = torch.load(model_name)
     dqn.load_state_dict(weights)
     dqn.to(device)
@@ -72,6 +72,7 @@ if __name__ == '__main__':
         rewards = np.array(rewards)
         print("Mean reward: {}".format(rewards.mean()))
         print("Num positive reward: {}/{}".format(len(rewards[rewards > 0]), len(rewards)))
+        print("Num finished matches: {}/{}".format(len(rewards[rewards >= -500.0]), len(rewards)))
     else:
         print("Total reward", test(device=device, dqn=dqn, game_params=game_params, preprocess=preprocess,
-                     draw_gif=draw_gif))
+                                   draw_gif=draw_gif))

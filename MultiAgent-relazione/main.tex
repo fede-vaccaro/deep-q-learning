@@ -1,9 +1,9 @@
 \documentclass{article}
 \usepackage[utf8]{inputenc}
 
-\title{MultiAgent Systems course project}
-\author{Federico Vaccaro - Università degli Studi di Firenze }
-\date{September 2020}
+\title{Application of Deep Q-Learning techniques on a GridWorld game}
+\date{October 2020 - MultiAgent Systems course project - Università degli Studi di Firenze}
+\author{Federico Vaccaro}
 
 \usepackage{natbib}
 \usepackage{graphicx}
@@ -73,8 +73,9 @@ This strategy can also be interpreted from a \textbf{Global Optimization} perspe
 \\
 Now, we are able to define the \textbf{Deep Q-Learning training algorithm}.
 \subsection{Deep Q-Learning algorithm}
+
 In the Alg. \ref{dqlalg} we show the pseudocode for the Deep-Q-Learning algorithm.
-\begin{algorithm}[!h]
+\begin{algorithm}[H]
 	\caption{Deep Q-Learning algorithm}
 	\label{dqlalg}
 	\begin{algorithmic}
@@ -88,7 +89,7 @@ In the Alg. \ref{dqlalg} we show the pseudocode for the Deep-Q-Learning algorith
 			\State Execute $a_t$ and observe reward $r_t$ and state change $x_{t+1}$
 			\State set sequence $s_{t+1}=(x_t, a_t, x_{t+1}, r_t)$ 
 			\State store sequence $s_{t+1}$ in $\mathcal{D}$
-			\State sample a minibatch of transitions $s_j=(x_j, a_j, x_{j+1}, r_j)$
+			\State sample a minibatch of $B$ transitions $s_j=(x_j, a_j, x_{j+1}, r_j)$
 			\State set $y_j = 
 			\begin{cases}
 				r_t \text{ if $x_{t+1}$ is terminal} \\
@@ -96,16 +97,25 @@ In the Alg. \ref{dqlalg} we show the pseudocode for the Deep-Q-Learning algorith
 			\end{cases}
 			$
 			\State Compute $L(\theta) = \sum_{j}^{B} \frac{1}{B} (y_j - Q(x_j, a_j|\theta) )^2 $
-			\State Perform a gradient update based on $\nabla_\theta L\theta$
+			\State Perform a gradient descent update based on $\nabla_\theta L\theta$
 		\EndFor		
 		\EndFor
 	\end{algorithmic}
 \end{algorithm}
-% TODO
 
+\subsection{Double Deep-Q Learning}
+But it is known to sometimes learn unrealistically high action values because it includes a maximization step over estimated action values, which tends to prefer overestimated to underestimated values. One way to alleviate this issue is to decoupling the training network from the computing of the target values $y_i$ in (\ref{dql}). If we expand the equation, then we obtain (in a deterministic environment):
+\begin{equation}
+\label{doubleql}
+\begin{aligned}
+		y_i =  r + \gamma \max_{a'} Q(s', a'|\theta) = \\
+		r + \gamma Q(s', \arg \max_a Q(s, a|\theta)  |\theta) =
+\end{aligned}
+\end{equation}
+In the equation (\ref{doubleql}) appears that we use the same set of parameters $\theta$ for predicting the $\arg \max$ and both computing the targets, which induces the over-estimation. By decoupling this task into two set of parameters (\textit{i.e.} into two network with parameters $\theta$ and $\theta^t $) we alleviate this issue. During the training, the roles of these two Q-network will be switched after a number of steps. 
 \section{Experimental results}
 \subsection{GridWorld-style game}
-For testing our implementation of the DQL algorithm, we implemented a game in a \textit{GridWorld} fashion. The game consists of a grid with shape $D \times D$, where we set $D = 16$. For enabling the rendering to an RGB image, each cell in the grid has $3$ channels (thus the state is a tensor $D \times D \times C$). By default, a cell is white (has value $1.0$ for each channel). Then, the agent should move its position, represented when a cell is \textit{green} colored to the red square which is the ending (winning) cell. Both start and ending positions are randomly generated at each match to be on the perimeter of the grid, but to be always distant)  Also, we generate a number of \textit{obstacles} uniformly spread across the grid, which are represented with the black color. The agent can move at each step the green square in one of the four direction (up, right, down, left).
+For testing our implementation of the DQL algorithm, we implemented a game in a \textit{GridWorld} fashion (Fig. \ref{fig:game1}). The game consists of a grid with shape $D \times D$, where we set $D = 16$. For enabling the rendering to an RGB image, each cell in the grid has $3$ channels (thus the state is a tensor $D \times D \times C$). By default, a cell is white (has value $1.0$ for each channel). Then, the agent should move its position, represented when a cell is \textit{green} colored to the red square which is the ending (winning) cell. Both start and ending positions are randomly generated at each match to be on the perimeter of the grid, but to be always distant)  Also, we generate a number of \textit{obstacles} uniformly spread across the grid, which are represented with the black color. The agent can move at each step the green square in one of the four direction (up, right, down, left).
 The reward system works as follows:
 \begin{itemize}
 	\item $r_t = 1$ If the agent get the green closer to the ending square but in a white cell;
@@ -114,26 +124,44 @@ The reward system works as follows:
 	\item $r_t = 2$ If the agent can reach the red square.
 	\item $r_t = 0$ If the agent gets farther from the objective, but in a white cell. There is no penalty here for avoiding punishing the agent for going around an obstacle. We let the discount factor limiting the rewards for being obtained later.
 \end{itemize}
+The game terminates when the agent reach the green square; otherwise we adopted an early exit strategy, meaning when the game cumulative reward reaches a negative score of $-500$ the game is also terminated. 
 This problem, can be interpreted as a different modeling of finding the \textbf{shortest-path} between two cells.
 
+\begin{figure}
+	\centering
+	\includegraphics[width=\textwidth]{game_example}
+	\caption{Example of game initial state.}
+	\label{fig:game1}
+\end{figure}
+
 \subsection{Implementation details}
-The network architecture we utilized is composed from one fully-connected (FC) hidden layer with 1024 output units, followed by a batch normalization layer which we found fundamental for regularization purposes, and a final FC layer for producing the Q-scores. After the hidden layer, is applied a ReLU function for obtaining non-linearity. The state tensor, which is the input of the network, is reshaped to a 1-d vector of dimension $768$. Summarizing, the computing pipeline is as in (\ref{net}). We did not find useful to include the last few frames (as is common practice) in the computing of the Q values, since the optimal solution does not depend on the previous steps.
+The network architecture we utilized is composed from one fully-connected (FC) hidden layer with 1024 output units, followed by a batch normalization layer which we found fundamental for regularization purposes, and a final FC layer for producing the Q-scores. After the hidden layer, is applied a ReLU function for obtaining non-linearity. The state tensor, which is the input of the network, is reshaped to a 1-d vector of dimension $768$. Summarizing, the computing pipeline is as in (\ref{net}). We did not find useful to include the last few frames (as is common practice) in the computing of the Q values, since the optimal solution does not depend on the previous steps. Our first attempt was employin a \textit{CNN}, however we found the convolution operation detrimental on a strictly discrete environment as our game, then we employed a more common .
 
 \begin{equation}
 \label{net}
 	Q(\textbf{s}|\theta) = \textbf{s} \rightarrow FC_{1024} \rightarrow ReLU \rightarrow BN \rightarrow FC_{4}
 \end{equation}
-The network is trained for $500$ episodes. Each episode, the network is updated $1000$ times with the samples drawn from the Replay Memory in mini-batches of $32$. The discount factor is fixed $\gamma=0.9$ at The exploration rate $\epsilon$ starts at $0.9$, linearly decaying until the half-way episode to $0.1$. The employed optimization method is Adam, with \textit{learning rate} $\eta = 10^{-4}$ and \textit{weight decay} (L2 regularization) $= 10^{-6}$.
-Before processing the state with the network, we normalize the state vector components in the range $[-1,1]$.
-\begin{figure}[h!]
-\centering
-\includegraphics[width=\textwidth]{game_example}
-\caption{Example of game initial state.}
-\label{fig:game1}
-\end{figure}
+The network is trained for $500$ episodes. Each episode, the network is updated $1000$ times with the samples drawn from the Replay Memory in mini-batches of $32$. The discount factor is fixed $\gamma=0.85$ at The exploration rate $\epsilon$ starts at $0.9$, linearly decaying until the one quarter-way episode to $0.1$. The employed SGD optimizer is Adam, with \textit{learning rate} $\eta = 10^{-4}$ and \textit{weight decay} (L2 regularization) $= 10^{-6}$.
+Before processing the state with the network, we normalize the state vector components to fit in the range $[-1,1]$.
+
+\subsection{Evaluating the models}
+
+For the evaluation, we let the agent playing 1,000 matches of the game, we evaluate our agent in terms of counting the number of matches terminated with a positive score, the number of matches terminated on the arrival square and the average score of all the 1,000 matches. We summarize this scores in table \ref{scores}.
+
+\begin{center}
+	\label{scores}
+	\begin{tabular}{ |l|c|c|c| } 
+		\hline
+		Method & Positive score (\%) & Arrival score (\%) & Avg. final reward \\ 
+		\hline
+		DQL & 96.5 & 100.0 & 19.97\\ 
+		Double DQL  &  &  &\\ 
+		\hline
+	\end{tabular}
+\end{center}
 
 \section{Conclusion}
-In this project, we experienced a different way of solving problem: the Reinforcement Learning, applying the Deep Q-Learning algorithm. In particular, we found interesting how a small neural network is able to successfully approximate a classic pathfinding algorithm \textit{e.g. Dijkstra, or the $A^\star$ algorithms} without explicitly coding its rules, but rather by designing a simple reward system. However, the real advantage of with this machine learning, is that we are potentially able approximate a wide range of tasks, not only the class of algorithms we saw in this experiment. 
+In this project, we experienced a different way of solving problem: the Reinforcement Learning, applying the Deep Q-Learning algorithm. In particular, we found interesting how a small neural network is able to successfully approximate a classic pathfinding algorithm \textit{e.g. Dijkstra, or the $A^\star$ algorithms} without explicitly coding its rules, but rather by designing a simple reward system, and by approximating the solution to the Bellman equation. However, the real advantage of with this machine learning paradigm, is that we are potentially able approximate a wide range of tasks, not only the class of algorithms we saw in this experiment. 
 
 \bibliographystyle{plain}
 \bibliography{references}

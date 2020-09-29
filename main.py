@@ -25,11 +25,14 @@ def cat(*args):
 
 
 game_dim = 16
-gamma = 0.90
+gamma = 0.85
 e_rate_start = 0.90
 e_rate_end = 0.1
 swap_freq = 10
-
+exploration_stop = 0.25
+batch_size = 32
+save_plots = True
+save_checkpoint = False
 ap = argparse.ArgumentParser()
 
 # ap.add_argument("-dv", "--device", type=str, default='cpu',
@@ -39,7 +42,6 @@ ap.add_argument("-d", "--doubleq", action='store_true', default=False,
 
 args = vars(ap.parse_args())
 
-obs_dim = 84  # x 84
 use_dql = args['doubleq']
 use_batch_norm = True
 
@@ -48,14 +50,18 @@ n_episodes = 1000 if use_dql else 500
 game_params = {
     'dim': game_dim,
     # 'start': (0, 0),
-    'n_holes': 16
+    'n_holes': game_dim
 }
+
+description = "gdim-{}_gamma-{}_nepisodes-{}_explorationstop-{}_b-{}_dql-{}".format(game_dim, gamma, n_episodes,
+                                                                                    exploration_stop, batch_size,
+                                                                                    use_dql)
 
 
 def main():
-    dqn = MlpDQN(input_dim=game_dim**2*3, use_batch_norm=use_batch_norm)
+    dqn = MlpDQN(input_dim=game_dim ** 2 * 3, use_batch_norm=use_batch_norm)
     if use_dql:
-        dqn_target = MlpDQN(input_dim=game_dim**2*3, use_batch_norm=use_batch_norm)
+        dqn_target = MlpDQN(input_dim=game_dim ** 2 * 3, use_batch_norm=use_batch_norm)
     else:
         dqn_target = dqn
 
@@ -74,14 +80,12 @@ def main():
 
     opt = torch.optim.Adam(lr=1e-4, params=dqn.parameters(), weight_decay=1e-6)
     if use_dql:
-        target_opt = torch.optim.Adam(lr=1e-4, params=dqn_target.parameters())
+        target_opt = torch.optim.Adam(lr=1e-4, params=dqn_target.parameters(), weight_decay=1e-6)
 
     dqn.to(device)
     dqn_target.to(device)
 
     replay_memory = ReplayMemory(device)
-
-    exploration_stop = 0.5
 
     lambda1 = lambda e: max(
         e_rate_start * (1 - e / n_episodes * 1 / exploration_stop) + e_rate_end * e / n_episodes * 1 / exploration_stop,
@@ -130,24 +134,26 @@ def main():
                                      reward)
 
             # sample from replay memory
-            x_batch, actions_batch, x_then_batch, reward_batch = replay_memory.get_sample(32)
+            x_batch, actions_batch, x_then_batch, reward_batch = replay_memory.get_sample(batch_size)
 
             if len(x_batch) > 1:
                 dqn.train(True)
             else:
                 dqn.train(False)
-
             Q_predicted = dqn(x_batch)
+
             with torch.no_grad():
                 dqn_target.train(False)
-                Q_then_predicted = dqn_target(x_then_batch)
+                dqn.train(False)
+                argmax_actions = dqn(x_then_batch).argmax(dim=1)
+                Q_then_predicted = dqn_target(x_then_batch).gather(1, argmax_actions.unsqueeze(-1))
 
-            gt_non_terminal = reward_batch + gamma * Q_then_predicted.max(dim=1)[0]
+            gt_non_terminal = reward_batch + gamma * Q_then_predicted  # .max(dim=1)[0]
             gt_terminal = reward_batch
             gt = torch.where(reward_batch != 2, gt_non_terminal, gt_terminal)
 
             loss = (gt - torch.gather(Q_predicted, 1, actions_batch.unsqueeze(-1))) ** 2
-            loss = loss.mean() #+ dqn.get_reg_loss(1e-5)
+            loss = loss.mean()  # + dqn.get_reg_loss(1e-5)
             loss.backward()
 
             epoch_loss += [float(loss)]
@@ -171,12 +177,12 @@ def main():
         epoch_loss = np.array(epoch_loss).mean()
         losses += [epoch_loss]
 
-        if (e + 1) % 100 == 0:
+        if ((e + 1) % 100 == 0) and save_checkpoint:
             torch.save({
                 'model': dqn.state_dict(),
                 'opt': opt.state_dict(),
                 'epoch': e,
-            }, 'dqn_training_e{}_game_dim{}.ptd'.format(n_episodes, game_dim))
+            }, 'dqn_training_checkpoint_e{}_{}.ptd'.format(e, description))
 
             # scheduler.step()
 
@@ -185,25 +191,25 @@ def main():
             dqn, dqn_target = dqn_target, dqn
             opt, target_opt = target_opt, opt
 
-    print("Training time: {} minutes".format((train_t0 - time.time()) // 60))
-
-    description = "dql" if use_dql else ""
+    print("Training time: {} minutes".format(-(train_t0 - time.time()) // 60))
 
     plt.plot(losses[10:])
     plt.ylabel('loss')
-    plt.savefig('loss_per_epoch_{}_{}.pdf'.format(n_episodes, description))
+    if save_plots:
+        plt.savefig('loss_per_epoch_{}.pdf'.format(description))
 
     plt.close()
 
     plt.plot(rewards)
     plt.ylabel('rewards')
-    plt.savefig('rewards_per_epoch_{}_{}.pdf'.format(n_episodes, description))
+    if save_plots:
+        plt.savefig('rewards_per_epoch_{}.pdf'.format(description))
 
     if dqn.name == 'target':
         dqn = dqn_target
 
     # save model for testing
-    torch.save(dqn.state_dict(), 'dqn_e{}_game_dim{}_{}.ptd'.format(n_episodes, game_dim, description))
+    torch.save(dqn.state_dict(), 'dqn_{}.ptd'.format(description))
 
     test(device=device, dqn=dqn, game_params=game_params, preprocess=preprocess, draw_gif=True)
 

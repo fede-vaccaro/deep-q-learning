@@ -176,9 +176,9 @@ class GridGame:
 
 if __name__ == '__main__':
     game_params = {
-        'dim': 8,
+        'dim': 16,
         #        'start': (0, 0),
-        'n_holes': 8
+        'n_holes': 16
     }
 
     game = GridGame(**game_params)
