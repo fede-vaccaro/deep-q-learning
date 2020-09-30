@@ -11,9 +11,13 @@ in a minimum number of steps.
   <img src="https://imgur.com/btJfkjD.gif">
 </p>
 
-For using the code:
+For using the code, first install the requirements with 
 ```
-$ python main.py
+$ pip install -r requirements.txt
+```
+Then run the training code by:
+```
+$ python main.py OPTIONS
 ```
 Options: 
 * `-d` for using Double Q-Learning 
