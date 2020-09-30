@@ -28,7 +28,7 @@ game_dim = 16
 gamma = 0.85
 e_rate_start = 0.90
 e_rate_end = 0.1
-swap_freq = 10
+swap_freq = 2
 exploration_stop = 0.25
 batch_size = 32
 save_plots = True
@@ -39,17 +39,24 @@ ap = argparse.ArgumentParser()
 #                help="Select between 'gpu' or 'cpu'. If cuda is not available, it will run on CPU by default.")
 ap.add_argument("-d", "--doubleq", action='store_true', default=False,
                 help="Use double Q-learning")
+ap.add_argument("-g", "--gpu", action='store_true',
+                help="Use GPU acceleration.")
 
 args = vars(ap.parse_args())
 
 use_dql = args['doubleq']
+gpu_acc = args['gpu']
+if gpu_acc:
+    device = 'cuda'
+else:
+    device = 'cpu'
+
 use_batch_norm = True
 
-n_episodes = 1000 if use_dql else 500
+n_episodes = 500
 
 game_params = {
     'dim': game_dim,
-    # 'start': (0, 0),
     'n_holes': game_dim
 }
 
@@ -70,12 +77,8 @@ def main():
     dqn.__setattr__('name', 'net')
     dqn_target.__setattr__('name', 'target')
 
-    device = 'cuda'
-
     preprocess = torchvision.transforms.Compose([
         torch.Tensor
-        # torchvision.transforms.ToTensor(),
-        # torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
     opt = torch.optim.Adam(lr=1e-4, params=dqn.parameters(), weight_decay=1e-6)
@@ -90,7 +93,6 @@ def main():
     lambda1 = lambda e: max(
         e_rate_start * (1 - e / n_episodes * 1 / exploration_stop) + e_rate_end * e / n_episodes * 1 / exploration_stop,
         e_rate_end)
-    scheduler = LambdaLR(opt, lr_lambda=[lambda1])
 
     losses = []
     rewards = []
@@ -153,7 +155,7 @@ def main():
             gt = torch.where(reward_batch != 2, gt_non_terminal, gt_terminal)
 
             loss = (gt - torch.gather(Q_predicted, 1, actions_batch.unsqueeze(-1))) ** 2
-            loss = loss.mean()  # + dqn.get_reg_loss(1e-5)
+            loss = loss.mean()
             loss.backward()
 
             epoch_loss += [float(loss)]
@@ -184,7 +186,6 @@ def main():
                 'epoch': e,
             }, 'dqn_training_checkpoint_e{}_{}.ptd'.format(e, description))
 
-            # scheduler.step()
 
         if ((e + 1) % swap_freq == 0) and use_dql:
             print("SWAPPING NETWORKS & OPTIMIZERS!")
@@ -209,7 +210,9 @@ def main():
         dqn = dqn_target
 
     # save model for testing
-    torch.save(dqn.state_dict(), 'dqn_{}.ptd'.format(description))
+    filename = 'dqn_{}.ptd'.format(description)
+    print("Saving model to: ", filename)
+    torch.save(dqn.state_dict(), filename)
 
     test(device=device, dqn=dqn, game_params=game_params, preprocess=preprocess, draw_gif=True)
 

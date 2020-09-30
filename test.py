@@ -1,3 +1,5 @@
+import argparse
+
 import numpy as np
 import torchvision
 from tqdm import tqdm
@@ -9,6 +11,8 @@ from PIL import Image
 
 def test(device, dqn, preprocess, game_params, draw_gif=True):
     # play a game and show how the agent acts!
+
+
     game = GridGame(**game_params)
     states = []
     max_steps = 1000
@@ -41,10 +45,23 @@ def test(device, dqn, preprocess, game_params, draw_gif=True):
 
 
 if __name__ == '__main__':
-    device = 'cuda'
+    ap = argparse.ArgumentParser()
+
+    ap.add_argument("-f", "--filename", type=str,
+                    help="Specify model filename.")
+    ap.add_argument("-g", "--gpu", action='store_true',
+                    help="Use GPU acceleration.")
+
+    args = vars(ap.parse_args())
+    filename = args['filename']
+    gpu_acc = args['gpu']
+    if gpu_acc:
+        device = 'cuda'
+    else:
+        device = 'cpu'
+
     game_dim = 16
-    model_name = 'dqn_gdim-16_gamma-0.85_nepisodes-500_explorationstop-0.25_b-32_dql-True.ptd'
-    print("Testing", model_name)
+    print("Testing", filename)
 
     game_params = {
         'dim': game_dim,
@@ -53,7 +70,7 @@ if __name__ == '__main__':
     }
 
     dqn = MlpDQN(input_dim=game_dim ** 2 * 3, use_batch_norm=True)
-    weights = torch.load(model_name)
+    weights = torch.load(filename)
     dqn.load_state_dict(weights)
     dqn.to(device)
 
