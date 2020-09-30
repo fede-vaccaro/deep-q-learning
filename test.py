@@ -12,7 +12,6 @@ from PIL import Image
 def test(device, dqn, preprocess, game_params, draw_gif=True):
     # play a game and show how the agent acts!
 
-
     game = GridGame(**game_params)
     states = []
     max_steps = 1000
@@ -51,10 +50,13 @@ if __name__ == '__main__':
                     help="Specify model filename.")
     ap.add_argument("-g", "--gpu", action='store_true',
                     help="Use GPU acceleration.")
+    ap.add_argument("-v", "--gif", action='store_true', default=False,
+                    help="Draw a gif example of match.")
 
     args = vars(ap.parse_args())
     filename = args['filename']
     gpu_acc = args['gpu']
+    draw_gif = args['gif']
     if gpu_acc:
         device = 'cuda'
     else:
@@ -65,7 +67,6 @@ if __name__ == '__main__':
 
     game_params = {
         'dim': game_dim,
-        # 'start': (0, 0),
         'n_holes': 16
     }
 
@@ -77,7 +78,6 @@ if __name__ == '__main__':
     preprocess = torchvision.transforms.Compose([
         torch.Tensor
     ])
-    draw_gif = False
 
     if not draw_gif:
         rewards = []
