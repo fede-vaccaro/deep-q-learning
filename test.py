@@ -40,7 +40,7 @@ def test(device, dqn, preprocess, game_params, draw_gif=True):
         states[0].save('match_dim{}.gif'.format(game_params['dim']),
                        save_all=True, append_images=states[1:], optimize=False, duration=150, loop=0)
         print("Total reward:", game.total_reward)
-    return game.total_reward
+    return game.total_reward, game.maximum_reward
 
 
 if __name__ == '__main__':
@@ -81,13 +81,18 @@ if __name__ == '__main__':
 
     if not draw_gif:
         rewards = []
+        max_scores = []
         for i in tqdm(range(1000)):
-            r = test(device=device, dqn=dqn, game_params=game_params, preprocess=preprocess,
+            r, max = test(device=device, dqn=dqn, game_params=game_params, preprocess=preprocess,
                      draw_gif=draw_gif)
             rewards += [r]
+            max_scores += [max]
 
         rewards = np.array(rewards)
+        max_scores = np.array(max_scores)
         print("Mean reward: {}".format(rewards.mean()))
+        print("Mean positive reward: {}".format(rewards[rewards > 0.0].mean()))
+        print("Oracle reward: {}".format(max_scores.mean()))
         print("Num positive reward: {}/{}".format(len(rewards[rewards > 0]), len(rewards)))
         print("Num finished matches: {}/{}".format(len(rewards[rewards >= -500.0]), len(rewards)))
     else:
