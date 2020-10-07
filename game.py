@@ -37,6 +37,8 @@ class GridGame:
         self.finish = finish
         self.total_reward = 0
 
+        self.maximum_reward = manhattan(start, finish) + 1
+
         self.max_steps = abs(start[0] - finish[0]) + abs(start[1] - finish[1])
         self.step_count = 0
         self.is_terminal = False
@@ -122,6 +124,9 @@ class GridGame:
         dim = self.side_dim
 
         old_state = self.current
+        if old_state not in self.holes:
+            self.state[old_state] = [0.7, 0.3, 0.5]
+
         self.visited_cells.add(old_state)
 
         if action_index == 0:  # up
@@ -183,14 +188,9 @@ if __name__ == '__main__':
 
     game = GridGame(**game_params)
 
-    # action_1 = np.array(3)
-    # action_2 = np.array(2)
-    # action_3 = np.array(2)
-    # action_4 = np.array(2)
-    #
-    # game.action(action_1)
-    # game.action(action_2)
-    # game.action(action_3)
-    # game.action(action_4)
+    game.action(2)
+    game.action(2)
+    game.action(3)
+    game.action(3)
 
     game.visualize_state()

@@ -28,7 +28,7 @@ game_dim = 16
 gamma = 0.85
 e_rate_start = 0.90
 e_rate_end = 0.1
-swap_freq = 2
+swap_freq = 5
 exploration_stop = 0.25
 batch_size = 32
 save_plots = True
@@ -53,7 +53,8 @@ else:
 
 use_batch_norm = True
 
-n_episodes = 500
+n_episodes = 5000
+steps_per_episode = 500
 
 game_params = {
     'dim': game_dim,
@@ -69,9 +70,11 @@ def main():
     dqn = MlpDQN(input_dim=game_dim ** 2 * 3, use_batch_norm=use_batch_norm)
     if use_dql:
         dqn_target = MlpDQN(input_dim=game_dim ** 2 * 3, use_batch_norm=use_batch_norm)
+        dqn_target.load_state_dict(dqn.state_dict())
     else:
         dqn_target = dqn
 
+    dqn_target.load_state_dict(dqn.state_dict())
     game = GridGame(**game_params)
 
     dqn.__setattr__('name', 'net')
@@ -104,7 +107,7 @@ def main():
 
         # for s in range(max_steps_per_episode):
         epoch_loss = []
-        tqdm_ = tqdm(range(1000))
+        tqdm_ = tqdm(range(steps_per_episode))
         t = time.time()
         for s in tqdm_:
             # while not game.is_terminal:
@@ -189,8 +192,9 @@ def main():
 
         if ((e + 1) % swap_freq == 0) and use_dql:
             print("SWAPPING NETWORKS & OPTIMIZERS!")
-            dqn, dqn_target = dqn_target, dqn
-            opt, target_opt = target_opt, opt
+            dqn_target.load_state_dict(dqn.state_dict())
+           #  dqn, dqn_target = dqn_target, dqn
+           # opt, target_opt = target_opt, opt
 
     print("Training time: {} minutes".format(-(train_t0 - time.time()) // 60))
 

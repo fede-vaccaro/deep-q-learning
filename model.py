@@ -72,12 +72,12 @@ class MlpDQN(nn.Module):
         super(MlpDQN, self).__init__()
         self.use_batch_norm = use_batch_norm
 
-        self.dense = nn.Linear(in_features=input_dim, out_features=1024)
+        self.dense = nn.Linear(in_features=input_dim, out_features=4096)
 
         if self.use_batch_norm:
-            self.bn = nn.BatchNorm1d(1024)
+            self.bn = nn.BatchNorm1d(4096)
 
-        self.dense2 = nn.Linear(in_features=1024, out_features=4)
+        self.dense2 = nn.Linear(in_features=4096, out_features=4)
 
     def get_reg_loss(self, lambda_reg):
         reg = torch.tensor([0.0], requires_grad=True)
