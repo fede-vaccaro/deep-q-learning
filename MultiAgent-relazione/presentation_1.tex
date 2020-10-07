@@ -94,7 +94,7 @@ Università degli studi di Firenze \\ % Your institution for the title page
 \medskip
 \textit{federico.vaccaro@stud.unifi.it} % Your email address
 }
-\date{\today} % Date, can be changed to a custom date
+\date{October 9, 2020} % Date, can be changed to a custom date
 
 \begin{document}
 
@@ -122,7 +122,7 @@ Università degli studi di Firenze \\ % Your institution for the title page
 	\textit{e.g.} K-means, Mean Shift, GMM...
 	\item \textbf{Supervised learning}: learning with annotations:
 	\\ \textit{e.g.} classification, regression with SVM, Decision Trees, Neural Networks...
-	\item \textbf{Reinforcement learning}: learning \textit{policies with rewards}:\\
+	\item \textbf{Reinforcement learning}: learning \textit{policies for maximizing rewards}:\\
 	\begin{itemize}
 		\item Q-Learning
 		\item Value iteration 
@@ -133,10 +133,10 @@ Università degli studi di Firenze \\ % Your institution for the title page
 
 \begin{frame}
 \frametitle{Reinforcement Learning}
-	An environment $\mathcal{E}$ and the interaction with an agent modeled as a dynamical system: $s_{t+1} = f(s_t, a_t, \xi_t )$.\\ The purpose of the agent is \textbf{maximizing} the expected reward.
+	An environment $\mathcal{E}$ and the interaction with an agent modeled as a dynamical system: $s_{t+1} = f(s_t, a_t, \xi_t )$.\\ The purpose of the agent is to \textbf{maximize} the expected reward.
 	
 	\begin{equation}
-\mathcal{V} = \mathbb{E}_\xi \{ \sum_{t=0}^{\infty} r(t, s_t, a_t) \} = \mathbb{E}_\xi \{ \sum_{t=0}^{\infty}R_t \} 
+\mathcal{V} = \mathbb{E}_\xi \{ (\sum_{t=0}^{T-1} r(t, s_t, a_t)) + r(s_T,t) \} % = \mathbb{E}_\xi \{ \sum_{t=0}^{\infty}R_t \} %
 	\end{equation}
 	
 \begin{figure}[H]
@@ -169,22 +169,23 @@ Each of the three strategies is designed to obey a fundamental equation, in rein
 	\end{equation}
 
 \end{theorem}
-Issue: \textbf{curse of dimensionality}! Complex to solve when state space $\mathbb{X}$ or action space $\mathbb{U}$ are large!
+
 \end{frame}
 %------------------------------------------------
 \begin{frame}
 \subsection{Q-Learning}
 \frametitle{Q-Learning}
-We can define the \textbf{action-value function} $Q(s,a) $. The $Q$ function is the result of \textbf{applying} the action $a$ while in the state $s$, getting the reward, and adding to it the \textbf{total reward} from the next state $s_{t+1}$ obtained by applying the optimal policy $\gamma^o(s_{t+1}, t)$.
+We can define the \textbf{action-value function} $Q(s,a) $. The $Q$ function is the result of \textbf{applying} the action $a$ while in the state $s$, getting the reward, and adding the discounted \textbf{expected reward} from the next state $s_{t+1}$ obtained by applying the optimal policy $\gamma^o(s_{t+1}, t+1)$.
 \begin{equation}
 	Q(s_t,a_t) = r(s_t, a_t) + \alpha \mathcal{V}^o(s_{t+1}, t+1)
 \end{equation}
 \begin{theorem}[$Q^\star$ satisfies the Bellman equation]
 	$Q^\star(s_t, a_t) = \max_{a} Q(s_t, a)$ \\
 	$\mathcal{V}^o(s_t, t) = Q^\star(s_t, a_t)$ by definition \\
-	$ \implies	Q^\star (s_t,a_t) = r(s_t, a_t) + \alpha \max_{a'} Q^\star(s_{t+1}, a_{t+1})$
+	$ \implies	Q^\star (s_t,a_t) = r(s_t, a_t) + \alpha \max_{a'} Q(s_{t+1}, a_{t+1})$
 \end{theorem}
-Therefore, the optimal policy $\gamma^o(s_0, 0)$ is simply defined by \textbf{selecting at each time-step} the action with \textbf{higher Q-score}.
+Therefore, the optimal policy $\gamma^o(s_0, 0)$ is simply defined by \textbf{selecting at each time-step} the action with \textbf{higher Q-score}. \\
+Issue: \textbf{curse of dimensionality}! Complex to solve when state space $\mathbb{X}$ or action space $\mathbb{U}$ are large!
 \end{frame}
 
 \section{Deep Q-Learning}
@@ -194,14 +195,14 @@ Therefore, the optimal policy $\gamma^o(s_0, 0)$ is simply defined by \textbf{se
 	\begin{equation}
 		Q(s, a) \approx Q(s,a| \theta)
 	\end{equation}
-	It is trained with a \textbf{regression} over the "real" Q-function.
+	It is trained with a \textbf{regression} over the Bellman equation.
 		\begin{equation}
 \begin{aligned}
-L_i(\theta _i ) = (y_i - Q(s,a|\theta_i))^2 \\
-y_i =  r + \alpha \max_{a'} Q^\star(s', a'|\theta_{i-1})
+y_i =  r + \alpha \max_{a'} Q(s', a'|\theta_{i-1}) \\
+L_i(\theta _i ) = (y_i - Q(s,a|\theta_i))^2
 \end{aligned}
 	\end{equation}
-Note that this method is \textbf{model-free}, \textit{i.e.} it has no prior knowledge/estimation of the emulator $\mathcal{E}$, but it directly observe its "external" state.
+Note that this method is \textbf{model-free}, \textit{i.e.} it has no prior knowledge/estimation of the environment $\mathcal{E}$, but it directly observe its "external" state.
 \end{frame}
 \subsection{Deep Q-Learning tricks}
 
@@ -220,11 +221,12 @@ This is efficient for two reasons:
 
 \begin{frame}
 \frametitle{\textit{Exploration-exploitation} trade-off}
- During the first stages of training, the parameters are close to being randomly initialized, then the output Q-scores have really few sense (Recall: $y_i =  r + \alpha \max_{a'} Q^\star(s', a'|\theta_{i-1})$). To achieving a meaningful approximation, with a probability of $\epsilon$ we select a random action ($1 - \epsilon$ selects the \textit{greedy} action) during the training. As the agent keep accumulating experience and training, $\epsilon$ will tend to decrease, letting the agent improving the learned policies. We refer to this mechanism as \textbf{exploration-exploitation} trade-off: in my\label{our} experiments, the value is initialized at $0.9$, and linearly decays to $0.1$ at the $25\%$ of completion of the training.\\~\\
+ During the first stages of training, the parameters are close to being randomly initialized, then the output Q-scores have really few sense, then choosing the \textit{greedy} action hardly is the best option. Before achieving a meaningful approximation, with a probability of $\epsilon$ we select a random action ($1 - \epsilon$ selects the greedy action) during the training. As the agent keep accumulating experience and training, $\epsilon$ will tend to decrease, letting the agent improving the learned policies. We refer to this mechanism as \textbf{exploration-exploitation} trade-off: in my\label{our} experiments, the value is initialized at $0.9$, and linearly decays to $0.1$ at the $25\%$ of completion of the training.\\~\\
  This technique makes the Deep Q-Learning \textbf{off-policy}, because it does not learn by directly sampling from a policy (a sequence of steps), but rather training on different actions, even randomly sampled.
 \end{frame}
 
-\begin{frame}{DQL algorithm}
+\subsection{DQL training algorithm}
+\begin{frame}{DQL training algorithm}
 	\begin{center}
 	\scalebox{0.7}{
 		    \begin{minipage}{1.1\linewidth}
@@ -235,9 +237,9 @@ This is efficient for two reasons:
 		\State Initialize ReplayMemory $\mathcal{D}$ with capacity N
 		\State Initialize DQN $Q(x, a|\theta)$ with random weights $\theta_0$
 		\For{episode $1,M$}
-		\State Initialize sequence $s_1=\{x_1\}$
+		\State Initialize sequence $s_0=\{x_1\}$
 		\For{$t=1,T$}
-		\State With probability $\epsilon_{ep}$ select action $a_t$ 
+		\State With probability $\epsilon_{ep}$ select the random action $a_t$ 
 		\State otherwise select $a_t=\max_{a}Q(x_t, a|\theta)$
 		\State Execute $a_t$ and observe reward $r_t$ and state change $x_{t+1}$
 		\State set sequence $s_{t+1}=(x_t, a_t, x_{t+1}, r_t)$ 
@@ -245,7 +247,7 @@ This is efficient for two reasons:
 		\State sample a minibatch of $B$ transitions $s_j=(x_j, a_j, x_{j+1}, r_j)$
 		\State set $y_j = 
 		\begin{cases}
-		r_t \text{ if $x_{t+1}$ is terminal} \\
+		r_t \text{ if $x_{t}$ is terminal} \\
 		r_t + \gamma\max_{a'}Q(x_{t+1}, a'|\theta) \text{ otherwise}
 		\end{cases}
 		$
@@ -260,6 +262,7 @@ This is efficient for two reasons:
 	\end{center}
 \end{frame}
 
+\subsection{Double Deep Q-Learning}
 \begin{frame}{Double Deep Q-Learning}
 	\begin{itemize}
 	\item Sometimes the model learn unrealistically high action values because it includes a maximization step over estimated action values, which tends to prefer overestimated to underestimated values. 
@@ -270,7 +273,7 @@ This is efficient for two reasons:
 	\label{doubleql}
 	\begin{aligned}
 	y_i =  r + \alpha \max_{a'} Q(s', a'|\theta) = \\
-	r + \alpha Q(s', \arg \max_a Q(s, a|\theta)  |\theta)
+	r + \alpha Q(s', \arg \max_a Q(s', a|\theta)  |\theta)
 	\end{aligned}
 	\end{equation}
 	The Eq. \ref{doubleql} becomes
@@ -310,9 +313,9 @@ This is efficient for two reasons:
 \begin{frame}{Environment reward system}
 	The reward system works as follows:
 	\begin{itemize}
-		\item $r_t = 1$ If the agent get the green closer to the ending square but in a white cell;
-		\item $r_t = -1$ If the agent move the green square upon an obstacle;
-		\item $r_t = -1$ If the agent enter again in an already visited cell (for discouraging loops) \textbf{or} try a move towards a wall;
+		\item $r_t = 1$ If the agent gets the green closer to the ending square but in a white cell;
+		\item $r_t = -1$ If the agent moves the green square upon an obstacle;
+		\item $r_t = -1$ If the agent enters again in a cell already visited (for discouraging loops) \textbf{or} tries a move towards a wall;
 		\item $r_t = 2$ If the agent can reach the red square;
 		\item $r_t = 0$ If the agent gets farther from the objective, but in a white cell not visited yet.
 	\end{itemize}
@@ -344,8 +347,8 @@ Before computing the action-value function, the state is processed as follows: i
 \begin{frame}{Evaluating the model}
 	After the agent plays 1,000 matches of the game, we evaluate our agent in terms of:
 	\begin{itemize}
-		\item The number of matches terminated with a \textbf{positive score};
-		\item The number of matches terminated on the arrival square (\textbf{Arrivals score});
+		\item The number of matches terminated with a \textbf{positive rate};
+		\item The number of matches terminated on the arrival square (\textbf{Arrivals rate});
 		\item The \textbf{average total reward} and \textbf{average positive reward} of all the matches.
 		Additionally, this results are sided by the result reached by an "oracle agent", computed as $d(start, finish) + 1$, where $d(*,*)$ is the \textit{Manhattan} distance between two cells.
 	\end{itemize} 	
@@ -356,10 +359,10 @@ Before computing the action-value function, the state is processed as follows: i
 
 	\begin{tabular}{l c c c c c}
 		\toprule
-		Method & Pos. score (\%) & Arr. score (\%) & Avg. final reward & Avg. pos. reward & Avg. oracle reward \\ 
+		Method & Pos. rate (\%) & Arr. rate (\%) & Avg. final reward & Avg. oracle reward \\ 
 		\midrule
-		DQL & 96.0 & 99.8 & 18.06 & 23.95 \\ 
-		Double DQL  & 94.5 & 99.5 & 14.65 & 23.95\\ 
+		DQL & 96.0 & 99.8 & 18.06 & 24.0 $\pm$ 0.05 \\ 
+		Double DQL  & 94.5 & 99.5 & 14.65 & 24.0 $\pm$ 0.05\\ 
 		\bottomrule
 	\end{tabular}
 }
@@ -409,11 +412,11 @@ Before computing the action-value function, the state is processed as follows: i
 \frametitle{References}
 \footnotesize{
 \begin{thebibliography}{99} % Beamer does not support BibTeX so references must be inserted manually as below
-\bibitem[Mnih, 2013]{p1} Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Alex Graves and Ioannis Antonoglou, Daan Wierstra and Martin Riedmiller (2013)
-\newblock Playing Atari with Deep Reinforcement Learning
+\bibitem[Mnih, 2013]{p1} Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Alex Graves and Ioannis Antonoglou, Daan Wierstra and Martin Riedmiller
+\newblock Playing Atari with Deep Reinforcement Learning (2013)
 
 
-\bibitem[Van Hassel, 2015]{p1} Deep Reinforcement Learning with Double Q-learning (2012)
+\bibitem[Van Hassel, 2015]{p1} Deep Reinforcement Learning with Double Q-learning
 \newblock Hado van Hasselt and Arthur Guez and David Silver (2015)
 \end{thebibliography}
 }
